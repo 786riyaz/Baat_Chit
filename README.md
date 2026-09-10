@@ -88,3 +88,17 @@ For the current backend upload flow, the IAM principal needs at least:
 ```
 
 If your browser directly opens the stored S3 object URL, the object/bucket delivery configuration must also allow browser reads. For a production application, prefer private objects with controlled delivery such as presigned URLs or CloudFront instead of making a bucket broadly public.
+
+## Exercise 17 - Scaling with Archived Chats
+
+The active `messages` collection stores only recent messages. A scheduled cron job runs every night by default and moves messages older than 24 hours into the `archivedchats` collection, then deletes them from `messages` only after the archive write succeeds.
+
+Environment variables:
+
+- `ARCHIVE_AFTER_HOURS=24`
+- `ARCHIVE_BATCH_SIZE=1000`
+- `ARCHIVE_CRON_SCHEDULE=0 0 * * *`
+
+For development/testing, you can temporarily set `ARCHIVE_AFTER_HOURS` to a small value and use a faster cron schedule. Restore the production values before submission/deployment.
+
+Chat history loading merges active and archived messages so archived messages remain visible in the UI.

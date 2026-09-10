@@ -1,6 +1,7 @@
 const User = require("../../models/User");
 const Group = require("../../models/Group");
 const Message = require("../../models/Message");
+const ArchivedChat = require("../../models/ArchivedChat");
 const { normalizeEmail, createPersonalRoomId } = require("../../utils/room");
 
 function respond(callback, payload) {
@@ -88,10 +89,35 @@ function registerChatHandlers(io, socket) {
       socket.data.currentChatType = chatType;
       socket.data.currentGroupId = groupId || null;
 
-      const messages = await Message.find({ roomId: validatedRoomId })
-        .populate("sender", "name email")
-        .sort({ createdAt: 1 })
-        .limit(200);
+      // Keep the active collection small, but merge recent active messages with
+      // archived history so users do not lose older chat history.
+      const [activeMessages, archivedMessages] = await Promise.all([
+        Message.find({ roomId: validatedRoomId })
+          .populate("sender", "name email")
+          .sort({ createdAt: -1 })
+          .limit(200),
+        ArchivedChat.find({ roomId: validatedRoomId })
+          .populate("sender", "name email")
+          .sort({ originalCreatedAt: -1 })
+          .limit(200)
+      ]);
+
+      const normalizedArchived = archivedMessages.map((message) => ({
+        _id: message.originalMessageId,
+        chatType: message.chatType,
+        roomId: message.roomId,
+        groupId: message.groupId,
+        sender: message.sender,
+        text: message.text,
+        media: message.media,
+        createdAt: message.originalCreatedAt,
+        updatedAt: message.originalUpdatedAt,
+        archived: true
+      }));
+
+      const messages = [...activeMessages, ...normalizedArchived]
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+        .slice(-200);
 
       respond(callback, {
         success: true,

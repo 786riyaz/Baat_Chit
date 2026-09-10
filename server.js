@@ -14,6 +14,7 @@ const authenticateToken = require("./middleware/auth");
 const { upload, MAX_FILE_SIZE } = require("./middleware/upload");
 const { uploadMedia } = require("./services/s3");
 const Message = require("./models/Message");
+const { startArchiveJob } = require("./jobs/archiveChats");
 const registerChatHandlers = require("./socket/handlers/chat");
 const { normalizeEmail, createPersonalRoomId } = require("./utils/room");
 
@@ -28,7 +29,10 @@ app.use(express.static(path.join(__dirname, "public")));
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB connected successfully"))
+  .then(() => {
+    console.log("MongoDB connected successfully");
+    startArchiveJob();
+  })
   .catch((error) => console.error("MongoDB connection error:", error.message));
 
 // ---------------- AUTH ----------------
@@ -421,11 +425,6 @@ io.on("connection", (socket) => {
   registerChatHandlers(io, socket);
 });
 
-// httpServer.listen(PORT, () => {
-//   console.log(`Server running on http://localhost:${PORT}`);
-// });
-
-// Added 0.0.0.0 for render traffic 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
