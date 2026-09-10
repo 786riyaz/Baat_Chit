@@ -7,7 +7,11 @@ const state = {
   currentGroup: null,
   maxFileSize: 25 * 1024 * 1024,
   maxFiles: 10,
-  uploading: false
+  uploading: false,
+  aiEnabled: false,
+  predictiveTimer: null,
+  predictiveRequestId: 0,
+  smartReplyRequestId: 0
 };
 
 const $ = (id) => document.getElementById(id);
@@ -43,6 +47,109 @@ async function api(url, options = {}) {
   return data;
 }
 
+async function loadAiStatus() {
+  try {
+    const result = await api("/api/ai/status", { method: "GET" });
+    state.aiEnabled = Boolean(result.enabled);
+    if (!state.aiEnabled) clearAiSuggestions();
+  } catch {
+    state.aiEnabled = false;
+    clearAiSuggestions();
+  }
+}
+
+function clearAiSuggestions() {
+  $("smartReplyList").innerHTML = "";
+  $("predictiveSuggestionList").innerHTML = "";
+  $("aiSuggestions").classList.add("hidden");
+}
+
+function updateAiVisibility() {
+  const hasSmart = $("smartReplyList").children.length > 0;
+  const hasPredictive = $("predictiveSuggestionList").children.length > 0;
+  $("aiSuggestions").classList.toggle("hidden", !hasSmart && !hasPredictive);
+}
+
+function renderSuggestionButtons(containerId, items, onClick) {
+  const container = $(containerId);
+  container.innerHTML = "";
+  items.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "suggestion-chip";
+    button.textContent = item;
+    button.addEventListener("click", () => onClick(item));
+    container.appendChild(button);
+  });
+  updateAiVisibility();
+}
+
+function applyPredictiveSuggestion(suggestion) {
+  const input = $("messageInput");
+  const current = input.value.trimEnd();
+  input.value = current ? `${current}${/\s$/.test(current) ? "" : " "}${suggestion}` : suggestion;
+  input.focus();
+  renderSuggestionButtons("predictiveSuggestionList", [], () => {});
+}
+
+async function requestPredictiveSuggestions() {
+  if (!state.aiEnabled || !state.currentRoom || state.uploading) return;
+  const draft = $("messageInput").value.trim();
+  if (draft.length < 3) {
+    renderSuggestionButtons("predictiveSuggestionList", [], () => {});
+    return;
+  }
+
+  const requestId = ++state.predictiveRequestId;
+  try {
+    const result = await api("/api/ai/predict", {
+      method: "POST",
+      body: JSON.stringify({ roomId: state.currentRoom, draft })
+    });
+    if (requestId !== state.predictiveRequestId || draft !== $("messageInput").value.trim()) return;
+    if (!result.enabled) {
+      state.aiEnabled = false;
+      clearAiSuggestions();
+      return;
+    }
+    renderSuggestionButtons("predictiveSuggestionList", result.suggestions || [], applyPredictiveSuggestion);
+  } catch {
+    // AI is optional; keep chat usable and silently clear stale suggestions.
+    if (requestId === state.predictiveRequestId) renderSuggestionButtons("predictiveSuggestionList", [], () => {});
+  }
+}
+
+function schedulePredictiveSuggestions() {
+  clearTimeout(state.predictiveTimer);
+  if (!state.aiEnabled || !state.currentRoom) return;
+  state.predictiveTimer = setTimeout(requestPredictiveSuggestions, 850);
+}
+
+async function requestSmartReplies(message) {
+  if (!state.aiEnabled || !state.currentRoom || !message?.text) return;
+  const requestId = ++state.smartReplyRequestId;
+  const roomId = state.currentRoom;
+  try {
+    const result = await api("/api/ai/smart-replies", {
+      method: "POST",
+      body: JSON.stringify({ roomId, message: message.text })
+    });
+    if (requestId !== state.smartReplyRequestId || roomId !== state.currentRoom) return;
+    if (!result.enabled) {
+      state.aiEnabled = false;
+      clearAiSuggestions();
+      return;
+    }
+    renderSuggestionButtons("smartReplyList", result.replies || [], (reply) => {
+      $("messageInput").value = reply;
+      renderSuggestionButtons("smartReplyList", [], () => {});
+      $("messageInput").focus();
+    });
+  } catch {
+    if (requestId === state.smartReplyRequestId) renderSuggestionButtons("smartReplyList", [], () => {});
+  }
+}
+
 async function loadMediaConfig() {
   try {
     const result = await api("/api/media/config", { method: "GET" });
@@ -61,6 +168,7 @@ function setAuthenticatedView() {
   connectSocket();
   loadGroups();
   loadMediaConfig();
+  loadAiStatus();
 }
 
 function setAuthView() {
@@ -97,6 +205,8 @@ function connectSocket() {
   state.socket.on("new_message", (message) => {
     if (message.roomId !== state.currentRoom) return;
     appendMessage(message);
+    const mine = String(message.sender?._id || message.sender) === String(state.user.id);
+    if (!mine) requestSmartReplies(message);
   });
 }
 
@@ -252,6 +362,9 @@ function joinRoom(payload, title, subtitle) {
       state.currentChatType = payload.chatType;
       if (payload.chatType !== "group") state.currentGroup = null;
       renderMessages(result.messages || []);
+      clearAiSuggestions();
+      state.predictiveRequestId += 1;
+      state.smartReplyRequestId += 1;
       setChatHeader(payload.chatType, title, subtitle);
     });
   };
@@ -330,6 +443,7 @@ function sendMessage(event) {
   state.socket.emit("send_message", { text }, (result) => {
     if (!result.success) return showToast(result.message, "error");
     $("messageInput").value = "";
+    renderSuggestionButtons("predictiveSuggestionList", [], () => {});
     $("messageInput").focus();
   });
 }
@@ -495,6 +609,9 @@ function logout() {
   state.currentRoom = null;
   state.currentChatType = null;
   state.currentGroup = null;
+  state.aiEnabled = false;
+  clearTimeout(state.predictiveTimer);
+  clearAiSuggestions();
   setAuthView();
 }
 
@@ -514,6 +631,7 @@ $("signupForm").addEventListener("submit", signup);
 $("startPersonalBtn").addEventListener("click", startPersonalChat);
 $("createGroupBtn").addEventListener("click", createGroup);
 $("messageForm").addEventListener("submit", sendMessage);
+$("messageInput").addEventListener("input", schedulePredictiveSuggestions);
 $("mediaBtn").addEventListener("click", selectMedia);
 $("mediaInput").addEventListener("change", uploadSelectedMedia);
 $("logoutBtn").addEventListener("click", logout);

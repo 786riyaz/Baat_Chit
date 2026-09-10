@@ -1,42 +1,57 @@
-# Socket.IO Chat – Exercise 16: Handling Multimedia Chats
+# Socket.IO Chat – Exercise 18: AI-Powered Chat Suggestions with Gemini
 
-This project continues Exercises 12–15. Exercise 16 focuses on robust multimedia sharing rather than storing binary files directly in MongoDB.
+This is the final version of the chat application from Exercises 1–17, now extended with Gemini-powered predictive typing and smart replies.
 
-## Architecture
+## Exercise 18 features
 
-```text
-Browser
-  -> multipart/form-data
-Node.js / Express
-  -> validates user + room membership
-Multer
-  -> AWS S3 object storage
-MongoDB
-  -> stores message metadata + S3 URL/key
-Socket.IO
-  -> emits new_message only to the active room
+### Predictive typing
+- Waits for the user to pause typing (700 ms debounce).
+- Sends the current draft and a small amount of recent room context to the backend.
+- Gemini returns 2–3 concise phrase suggestions.
+- Clicking a suggestion appends it to the message input.
+
+### Smart replies
+- When an incoming text message arrives in the currently open room, the client requests 2–3 short replies.
+- Suggestions appear as quick-select buttons above the composer.
+- Clicking a smart reply places it in the input so the user can review/edit it before sending.
+
+### Lightweight personalization
+The backend includes examples of the current user's recent messages in the Gemini prompt. This helps Gemini adapt suggestions toward the user's recent tone, wording and emoji style without storing a separate AI profile.
+
+### AI kill switch
+AI is optional and controlled completely from the server environment:
+
+```env
+AI_SUGGESTIONS_ENABLED=true
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
-The important pattern is: **file bytes go to object storage; MongoDB stores metadata and the object reference**. The existing message model stores the media key, URL, original name, MIME type and size.
+To disable Gemini completely:
 
-## Exercise 16 improvements over Exercise 15
+```env
+AI_SUGGESTIONS_ENABLED=false
+```
 
-- Multiple files can be selected at once.
-- Files upload sequentially, so the UI does not overload the backend/S3 with many simultaneous uploads.
-- Per-file upload progress is shown.
-- Transient network and 5xx failures are retried automatically up to 3 attempts.
-- Client and server both validate file type and file size.
-- Server returns predictable JSON for Multer errors, including `413` for oversized files.
-- Images, videos and audio render inline.
-- PDFs, ZIPs, DOC/DOCX, XLS/XLSX, PPT/PPTX and TXT files render as safe open/download links.
-- MongoDB remains the chat history source of truth; S3 remains the binary-media store.
-- Socket.IO sends the final persisted message only to the relevant personal/group room.
-- Duplicate real-time messages are ignored in the UI.
+When disabled, the frontend receives no AI suggestions and the backend does not create a Gemini client or make Gemini API calls. If the API key is missing while AI is enabled, the chat server still starts and AI is treated as unavailable.
+
+## Existing features preserved
+
+- Signup and login with hashed passwords.
+- JWT authentication for REST APIs and Socket.IO.
+- Personal rooms with deterministic room IDs.
+- MongoDB user validation before starting personal chats.
+- Group creation and group membership validation.
+- Real-time room messages with Socket.IO.
+- AWS S3 multimedia sharing.
+- Image, video, audio and document/file rendering.
+- Upload progress, validation and retry handling.
+- Cron-based movement of old messages to `ArchivedChat`.
 
 ## Run locally
 
 ```bash
-npm i
+npm install
 npm run dev
 ```
 
@@ -44,61 +59,22 @@ Open `http://localhost:3000`.
 
 ## Environment variables
 
-Copy `.env.example` to `.env` and use your own credentials:
+Copy `.env.example` to `.env` and fill in your real credentials. Do not commit `.env`.
+
+Important AI settings:
 
 ```env
-PORT=3000
-MONGODB_URI=mongodb://127.0.0.1:27017/whatsapp_clone
-JWT_SECRET=replace_with_a_long_random_secret
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-S3_BUCKET_NAME=your_bucket_name
+AI_SUGGESTIONS_ENABLED=true
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
-Never commit `.env` or real AWS credentials to GitHub.
+For normal usage without AI cost/API calls:
+
+```env
+AI_SUGGESTIONS_ENABLED=false
+```
 
 ## Deployment
 
-This repository includes `render.yaml` for Render deployment.
-
-1. Push the project to GitHub.
-2. Create a new Render Web Service from the repository (or use the Blueprint).
-3. Set the environment variables from `.env` in Render's environment settings.
-4. Use a production-accessible MongoDB connection string. `mongodb://127.0.0.1/...` works only on your own machine, not on Render.
-5. Deploy.
-
-The server already uses `process.env.PORT`, so it is compatible with the port supplied by a hosting platform.
-
-## AWS permissions
-
-For the current backend upload flow, the IAM principal needs at least:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["s3:PutObject"],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
-    }
-  ]
-}
-```
-
-If your browser directly opens the stored S3 object URL, the object/bucket delivery configuration must also allow browser reads. For a production application, prefer private objects with controlled delivery such as presigned URLs or CloudFront instead of making a bucket broadly public.
-
-## Exercise 17 - Scaling with Archived Chats
-
-The active `messages` collection stores only recent messages. A scheduled cron job runs every night by default and moves messages older than 24 hours into the `archivedchats` collection, then deletes them from `messages` only after the archive write succeeds.
-
-Environment variables:
-
-- `ARCHIVE_AFTER_HOURS=24`
-- `ARCHIVE_BATCH_SIZE=1000`
-- `ARCHIVE_CRON_SCHEDULE=0 0 * * *`
-
-For development/testing, you can temporarily set `ARCHIVE_AFTER_HOURS` to a small value and use a faster cron schedule. Restore the production values before submission/deployment.
-
-Chat history loading merges active and archived messages so archived messages remain visible in the UI.
+For Render, configure all MongoDB, JWT, AWS and Gemini environment variables in the Render dashboard. `PORT` is read from `process.env.PORT`, so the application remains platform-compatible.

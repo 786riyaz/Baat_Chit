@@ -17,6 +17,7 @@ const Message = require("./models/Message");
 const { startArchiveJob } = require("./jobs/archiveChats");
 const registerChatHandlers = require("./socket/handlers/chat");
 const { normalizeEmail, createPersonalRoomId } = require("./utils/room");
+const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -26,6 +27,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/api/ai", aiRoutes);
 
 mongoose
   .connect(process.env.MONGODB_URI)

@@ -1,8 +1,8 @@
 {
-  "name": "socketio-chat-exercise-17",
+  "name": "socketio-chat-exercise-18",
   "version": "1.0.0",
   "private": true,
-  "description": "Scalable Socket.IO chat with multimedia, AWS S3 and scheduled MongoDB message archiving",
+  "description": "Socket.IO chat with multimedia, archiving and Gemini AI suggestions",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
@@ -17,7 +17,8 @@
     "socket.io": "^4.8.1",
     "@aws-sdk/client-s3": "^3.758.0",
     "multer": "^1.4.5-lts.1",
-    "cron": "^4.3.1"
+    "cron": "^4.3.1",
+    "@google/genai": "^1.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
