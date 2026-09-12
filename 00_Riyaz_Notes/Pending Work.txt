@@ -1,0 +1,1621 @@
+You are a senior full-stack architect and engineer.
+
+I have an existing, fully working Node.js chat application. DO NOT rebuild the project from scratch unless absolutely necessary.
+
+Your task is to carefully refactor, migrate, and extend the existing application into a modern, production-style, WhatsApp-inspired real-time chat application.
+
+IMPORTANT:
+- Preserve all existing working functionality.
+- Do not remove existing features.
+- Do not replace working logic unnecessarily.
+- Extend and refactor the existing project carefully.
+- Before changing architecture, inspect the existing codebase and understand how authentication, Socket.IO, MongoDB, S3, AI, groups, messages, and archiving currently work.
+- The final application must work locally and be deployable on Render.
+- The frontend must be migrated to Next.js.
+- The backend must remain Node.js + Express + Socket.IO unless a small architectural adjustment is necessary.
+- Use clean modular architecture.
+- Avoid duplicate code.
+- Add proper validation, authorization, loading states, error handling, and responsive UI.
+- Do not provide incomplete snippets. Implement complete working files.
+
+==================================================
+1. EXISTING FEATURES THAT MUST BE PRESERVED
+==================================================
+
+The current application already includes:
+
+1. User signup.
+2. User login.
+3. JWT authentication.
+4. Password hashing.
+5. Personal chat.
+6. Deterministic personal chat room IDs based on sorted user identifiers.
+7. Validation that the user being searched by email exists.
+8. Group chat.
+9. Socket.IO real-time messaging.
+10. Socket.IO authentication.
+11. Modular Socket.IO server structure.
+12. MongoDB message storage.
+13. Fetching historical messages.
+14. AWS S3 media/file sharing.
+15. Image sharing.
+16. Video sharing.
+17. General file sharing.
+18. Message archiving using cron.
+19. Moving old messages into an archived collection.
+20. Gemini AI predictive typing.
+21. Gemini AI smart replies.
+22. Personalized AI suggestions.
+23. Separate AI prompt file.
+24. AI enable/disable environment variable.
+25. Gemini retry handling for temporary failures such as 429 and 503.
+26. MongoDB Atlas compatibility.
+27. Render deployment compatibility.
+
+ALL OF THESE FEATURES MUST CONTINUE TO WORK.
+
+==================================================
+2. TECHNOLOGY STACK
+==================================================
+
+Frontend:
+- Next.js
+- JavaScript or TypeScript (choose one and use it consistently)
+- Modern component-based architecture
+- Socket.IO client
+- Responsive CSS
+
+Backend:
+- Node.js
+- Express.js
+- Socket.IO
+
+Database:
+- MongoDB
+- Mongoose
+
+Authentication:
+- JWT
+- bcrypt
+
+Media:
+- AWS S3
+
+AI:
+- Google Gemini API
+- Existing model configuration through environment variables
+
+Email:
+- Nodemailer
+
+Deployment:
+- Render
+- MongoDB Atlas
+- AWS S3
+
+==================================================
+3. PROJECT ARCHITECTURE
+==================================================
+
+Create a clean architecture similar to:
+
+project-root/
+│
+├── frontend/
+│   ├── app/
+│   │   ├── login/
+│   │   ├── signup/
+│   │   ├── forgot-password/
+│   │   ├── reset-password/
+│   │   ├── chat/
+│   │   ├── profile/
+│   │   ├── admin/
+│   │   └── layout.js
+│   │
+│   ├── components/
+│   │   ├── auth/
+│   │   ├── chat/
+│   │   ├── groups/
+│   │   ├── profile/
+│   │   ├── admin/
+│   │   └── common/
+│   │
+│   ├── hooks/
+│   │
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── socket.js
+│   │   └── auth.js
+│   │
+│   ├── utils/
+│   │
+│   └── public/
+│
+├── backend/
+│   ├── server.js
+│   │
+│   ├── config/
+│   │   ├── database.js
+│   │   ├── aws.js
+│   │   └── mail.js
+│   │
+│   ├── models/
+│   │   ├── User.js
+│   │   ├── Chat.js
+│   │   ├── ArchivedChat.js
+│   │   ├── Group.js
+│   │   └── PasswordReset.js
+│   │
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── userController.js
+│   │   ├── chatController.js
+│   │   ├── groupController.js
+│   │   ├── adminController.js
+│   │   └── aiController.js
+│   │
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── userRoutes.js
+│   │   ├── chatRoutes.js
+│   │   ├── groupRoutes.js
+│   │   ├── adminRoutes.js
+│   │   └── aiRoutes.js
+│   │
+│   ├── middleware/
+│   │   ├── authMiddleware.js
+│   │   ├── adminMiddleware.js
+│   │   └── validationMiddleware.js
+│   │
+│   ├── services/
+│   │   ├── geminiService.js
+│   │   ├── mediaService.js
+│   │   └── mailService.js
+│   │
+│   ├── prompts/
+│   │   └── geminiPrompts.js
+│   │
+│   ├── socket-io/
+│   │   ├── index.js
+│   │   ├── middleware.js
+│   │   └── handlers/
+│   │       ├── personalChat.js
+│   │       ├── groupChat.js
+│   │       ├── presence.js
+│   │       └── receipts.js
+│   │
+│   └── jobs/
+│       └── archiveMessages.js
+│
+└── README.md
+
+You may improve this architecture where necessary, but keep responsibilities modular.
+
+==================================================
+4. UI / UX REQUIREMENTS
+==================================================
+
+Create a WhatsApp-inspired interface.
+
+Do NOT make an exact visual clone.
+
+The design should be modern, polished, professional, and portfolio quality.
+
+Desktop layout:
+
+------------------------------------------------
+| Sidebar         | Main Chat Window           |
+|                 |                            |
+| Profile         | Chat Header                |
+| Search          |                            |
+|                 | Messages                   |
+| Personal Chats  |                            |
+|                 |                            |
+| Groups          |                            |
+|                 |                            |
+|                 | AI Suggestions             |
+|                 | Message Input              |
+------------------------------------------------
+
+Mobile layout:
+
+- Responsive.
+- Chat list and chat window should transition naturally.
+- Use mobile-friendly navigation.
+- Profile and group settings should work properly on small screens.
+
+UI should include:
+
+1. Profile avatar.
+2. Online indicator.
+3. Last seen.
+4. Search users.
+5. Personal chats.
+6. Groups.
+7. Create group.
+8. Group settings.
+9. Message timestamps.
+10. Sent status.
+11. Delivered status.
+12. Read status.
+13. File previews.
+14. Image previews.
+15. Video previews.
+16. AI suggestion chips.
+17. Smart reply buttons.
+18. Approval/trial status indicator.
+19. Remaining message counter.
+20. Admin approval message.
+21. Infinite scrolling message history.
+22. Loading states.
+23. Empty states.
+24. Error states.
+
+Use clean spacing and avoid a crowded interface.
+
+==================================================
+5. AUTHENTICATION
+==================================================
+
+Implement or preserve:
+
+Signup:
+- Name
+- Email
+- Phone
+- Password
+
+Login:
+- Email or phone
+- Password
+
+JWT:
+- Access token authentication.
+
+Passwords:
+- Hash using bcrypt.
+
+Add proper validation:
+- Valid email.
+- Valid phone.
+- Minimum password requirements.
+- Duplicate email prevention.
+- Duplicate phone prevention.
+
+==================================================
+6. FORGOT PASSWORD
+==================================================
+
+Implement complete forgot-password functionality using Nodemailer.
+
+Flow:
+
+User
+↓
+Clicks Forgot Password
+↓
+Enters registered email
+↓
+Backend verifies user
+↓
+Generate secure random reset token
+↓
+Store hashed token or securely stored token with expiry
+↓
+Send reset email through Nodemailer
+↓
+User opens reset password link
+↓
+Token verified
+↓
+User enters new password
+↓
+Password updated
+↓
+Reset token invalidated
+
+Requirements:
+
+- Token expiry: configurable, default around 15 minutes.
+- Never expose sensitive token information unnecessarily.
+- Old password reset tokens must become invalid after successful reset.
+- Show success/error messages in frontend.
+- Use environment variables for SMTP credentials.
+- Reset link must support local and production frontend URLs.
+
+Suggested environment variables:
+
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+EMAIL_FROM=
+FRONTEND_URL=
+
+==================================================
+7. USER PROFILE MANAGEMENT
+==================================================
+
+Create complete profile management.
+
+User can view:
+
+- Profile photo.
+- Name.
+- Email.
+- Phone.
+- Bio/About.
+- Online status.
+- Last seen.
+
+User can edit:
+
+- Name.
+- Phone.
+- Profile photo.
+- Bio/About.
+- Password.
+
+Email should initially remain immutable.
+
+Profile image:
+- Upload to AWS S3.
+- Store resulting URL in MongoDB.
+
+Privacy setting:
+
+lastSeenPrivacy:
+
+- everyone
+- nobody
+
+Rules:
+
+everyone:
+Everyone allowed by application logic can see last seen.
+
+nobody:
+Do not show last seen to other users.
+
+The user should have a profile settings screen.
+
+==================================================
+8. USER APPROVAL AND FREE TRIAL SYSTEM
+==================================================
+
+This is a major feature.
+
+Every newly registered normal user starts with:
+
+approvalStatus = "pending"
+
+Message trial quota:
+
+FREE_MESSAGE_LIMIT = 10
+
+A new user can send a maximum of 10 trial messages.
+
+IMPORTANT BUSINESS RULE:
+
+The 10-message limit is based on total trial messages.
+
+There is NO time-based trial limit.
+
+If the user sends all 10 messages in two minutes, the trial quota is exhausted.
+
+The UI must continuously show remaining messages.
+
+Example:
+
+10 messages remaining
+9 messages remaining
+8 messages remaining
+
+...
+
+1 message remaining
+
+After the 10th trial message:
+
+0 messages remaining
+
+The user must see a clear message:
+
+"Your free message limit has been reached. Admin approval is required to continue messaging."
+
+The exact UI wording may be improved.
+
+==================================================
+9. POST-TRIAL RESTRICTIONS
+==================================================
+
+Once a pending user has used all 10 trial messages:
+
+The user must NOT be able to:
+
+- Send normal personal messages to arbitrary users.
+- Send media to arbitrary users.
+- Join groups.
+- Send group messages.
+- Use AI suggestions.
+
+However, the restricted user MUST still be able to:
+
+1. View existing chats.
+2. View previous messages.
+3. Receive incoming messages.
+4. Update profile.
+5. Use forgot password/login functionality.
+6. Search and communicate with the application administrator.
+
+ADMIN COMMUNICATION EXCEPTION:
+
+A restricted pending user must always be allowed to open a personal chat with the configured admin user and send messages to the admin.
+
+This allows the user to request approval or communicate with support.
+
+The admin chat must remain visible and accessible.
+
+For all other users, sending must be blocked after trial quota exhaustion.
+
+When attempting to send a restricted message, display:
+
+"Admin approval is required to continue messaging."
+
+or similar professional UI text.
+
+==================================================
+10. AI FREE TRIAL LIMIT
+==================================================
+
+Because Gemini API is being used on a free tier, AI usage must also be limited.
+
+For pending users:
+
+AI suggestions must only be available while the user still has trial messaging quota.
+
+After the user's 10-message quota is exhausted:
+
+- Disable predictive typing.
+- Disable smart replies.
+- Do not send unnecessary Gemini API requests.
+- Hide or disable AI suggestion UI.
+- Explain that AI suggestions will be available after admin approval.
+
+For approved users:
+
+AI functionality should be available normally.
+
+AI must work in:
+
+- Personal chats.
+- Group chats.
+
+The existing environment kill switch must remain:
+
+AI_SUGGESTIONS_ENABLED=true
+
+When false:
+
+- No Gemini API requests.
+- No predictive suggestions.
+- No smart replies.
+- Application must still work normally.
+
+==================================================
+11. ADMIN SYSTEM
+==================================================
+
+Admin email must be configured through environment variables.
+
+Example:
+
+ADMIN_EMAIL=admin@example.com
+
+During user registration:
+
+If user email matches ADMIN_EMAIL:
+
+role = "admin"
+approvalStatus = "approved"
+
+Otherwise:
+
+role = "user"
+approvalStatus = "pending"
+
+Do not allow a normal user to become admin from frontend.
+
+==================================================
+12. ADMIN DASHBOARD
+==================================================
+
+Create a secure admin dashboard.
+
+Only role="admin" users may access it.
+
+Admin dashboard should include:
+
+------------------------------------------------
+Dashboard Statistics
+------------------------------------------------
+
+- Total users.
+- Pending approval users.
+- Approved users.
+- Trial exhausted users.
+- Online users.
+- Total active messages.
+- Archived messages.
+- Total groups.
+
+------------------------------------------------
+Pending User Management
+------------------------------------------------
+
+For every user show:
+
+- Profile photo.
+- Name.
+- Email.
+- Phone.
+- Registration date.
+- Approval status.
+- Trial messages used.
+- Trial messages remaining.
+
+Admin actions:
+
+- Approve user.
+- Reject/suspend user if needed.
+- Revoke approval if needed.
+- Search users.
+
+Approval behavior:
+
+When admin approves:
+
+approvalStatus = "approved"
+
+The user:
+
+- Can send unlimited normal messages.
+- Can send media.
+- Can join groups.
+- Can use AI.
+- No longer sees trial quota restrictions.
+
+Use real-time Socket.IO notification if possible.
+
+Example:
+
+Admin approves user
+↓
+Socket event
+↓
+User frontend immediately updates
+↓
+Messaging features unlock without requiring manual refresh.
+
+==================================================
+13. USER MODEL CHANGES
+==================================================
+
+Extend User model appropriately.
+
+Suggested fields:
+
+name
+email
+phone
+password
+profilePhoto
+bio
+
+role:
+"user" | "admin"
+
+approvalStatus:
+"pending" | "approved" | "rejected" | "suspended"
+
+trialMessageCount:
+Number
+
+trialMessageLimit:
+Number
+
+isOnline:
+Boolean
+
+lastSeen:
+Date
+
+lastSeenPrivacy:
+"everyone" | "nobody"
+
+createdAt
+updatedAt
+
+Do not blindly copy this schema if existing fields differ.
+
+Migrate carefully without breaking existing users.
+
+==================================================
+14. PERSONAL CHAT
+==================================================
+
+Preserve deterministic room generation.
+
+For users:
+
+userA@email.com
+userB@email.com
+
+The room ID must be identical regardless of who starts the chat.
+
+Example logic:
+
+[userA, userB]
+sort()
+combine()
+
+Both:
+
+A → B
+
+and:
+
+B → A
+
+must generate exactly the same room ID.
+
+Validate the target email before joining.
+
+Do not allow fake/dummy user chats.
+
+==================================================
+15. GROUP CHAT
+==================================================
+
+Implement proper group management.
+
+Group fields should include:
+
+- Name.
+- Description.
+- Group image.
+- Creator.
+- Admins.
+- Members.
+- Created date.
+- Updated date.
+
+Only group admins can:
+
+- Add members.
+- Remove members.
+- Promote members to admin.
+- Demote admins where appropriate.
+- Change group name.
+- Change group description.
+- Change group image.
+
+Normal members can:
+
+- View group.
+- Send messages.
+- Leave group.
+
+Only group admins manage group-level settings.
+
+Pending/restricted users:
+
+- Must be able to see group discovery/listing if the existing application exposes groups.
+- Must NOT be able to join a group.
+- Show:
+
+"Admin approval will be required to join this group."
+
+Pending users who have exhausted their trial must also not send group messages.
+
+==================================================
+16. ONLINE STATUS AND LAST SEEN
+==================================================
+
+Implement real-time presence using Socket.IO.
+
+On authenticated socket connection:
+
+User:
+isOnline = true
+
+Broadcast presence update where appropriate.
+
+On disconnect:
+
+User:
+isOnline = false
+lastSeen = current timestamp
+
+Frontend should display:
+
+Online
+
+or:
+
+Last seen today at 10:35 PM
+
+Respect privacy:
+
+lastSeenPrivacy = "everyone"
+
+Show last seen.
+
+lastSeenPrivacy = "nobody"
+
+Do not expose last seen to other users.
+
+Use Socket.IO events for real-time presence updates.
+
+==================================================
+17. MESSAGE DELIVERY RECEIPTS
+==================================================
+
+Implement message statuses:
+
+sent
+delivered
+read
+
+Meaning:
+
+sent:
+Message successfully stored by server.
+
+delivered:
+Message delivered to recipient's connected client.
+
+read:
+Recipient opened/read the conversation.
+
+For UI:
+
+Sent:
+single check
+
+Delivered:
+double check
+
+Read:
+double check with visually distinct read state
+
+Do not require detailed "read by" lists for groups in this version.
+
+For group messages, implement a reasonable aggregate receipt state rather than a complex per-user receipt UI unless the current architecture already supports detailed per-user tracking.
+
+The backend must remain scalable.
+
+==================================================
+18. MESSAGE STORAGE
+==================================================
+
+Messages must continue to be stored in MongoDB.
+
+Suggested message fields:
+
+roomId
+senderId
+messageType
+
+content
+
+mediaUrl
+mediaName
+mediaMimeType
+mediaSize
+
+createdAt
+
+status
+
+editedAt if implemented in future
+
+For personal messages:
+
+recipientId may be stored where useful.
+
+For groups:
+
+groupId should be stored.
+
+Maintain compatibility with existing messages where possible.
+
+==================================================
+19. MESSAGE PAGINATION AND INFINITE SCROLL
+==================================================
+
+DO NOT load all messages at once.
+
+Use cursor-based pagination.
+
+Initial chat load:
+
+Load only latest 50 messages.
+
+Example:
+
+GET /api/messages/:roomId?limit=50
+
+Response:
+
+{
+  messages: [...],
+  nextCursor: "...",
+  hasMore: true
+}
+
+When user scrolls upward:
+
+Load previous 50 messages.
+
+Example:
+
+GET /api/messages/:roomId?limit=50&cursor=...
+
+Requirements:
+
+- Cursor-based pagination.
+- Avoid offset pagination for large datasets.
+- Maintain scroll position when older messages are prepended.
+- Do not jump user to another scroll position.
+- Prevent duplicate messages.
+- Prevent duplicate API calls while loading.
+- Show loading indicator at top.
+- Stop requests when hasMore = false.
+
+Messages must be ordered correctly.
+
+Newest messages should appear at the bottom.
+
+==================================================
+20. ARCHIVED MESSAGES
+==================================================
+
+Preserve the existing archive system.
+
+The cron job:
+
+1. Finds old messages.
+2. Moves them to ArchivedChat collection.
+3. Deletes successfully archived messages from active Chat collection.
+
+Ensure:
+
+- No accidental data loss.
+- Avoid duplicate archiving.
+- Archive process is idempotent where practical.
+- Errors are logged.
+- Active Chat collection remains lightweight.
+
+Pagination may need to consider archived history in future.
+
+For this implementation, document clearly how active and archived messages are handled.
+
+==================================================
+21. MEDIA SHARING
+==================================================
+
+Preserve and improve AWS S3 media sharing.
+
+Support:
+
+- Images.
+- Videos.
+- Documents.
+- General files.
+
+Requirements:
+
+- File type validation.
+- File size validation.
+- Configurable maximum size.
+- Unique S3 keys.
+- Loading progress if practical.
+- Image preview.
+- Video preview.
+- File download/open option.
+- Proper error messages.
+
+Restricted users must follow trial/approval rules.
+
+If restricted and target is not admin:
+
+Do not allow media upload/send.
+
+==================================================
+22. GEMINI AI FEATURES
+==================================================
+
+Preserve:
+
+1. Predictive typing.
+2. Smart replies.
+3. Personalized suggestions.
+4. Separate prompt file.
+5. Retry logic.
+6. 429 handling.
+7. 503 handling.
+8. AI environment kill switch.
+
+Current model should remain configurable:
+
+GEMINI_MODEL=gemini-3.5-flash-lite
+
+Prompt architecture:
+
+Keep prompts in a separate file.
+
+Example:
+
+backend/prompts/geminiPrompts.js
+
+Separate functions:
+
+buildPredictiveTypingPrompt()
+buildSmartReplyPrompt()
+
+Do not hardcode long prompts inside controllers.
+
+==================================================
+23. PREDICTIVE TYPING REQUIREMENTS
+==================================================
+
+As user types:
+
+- Do not call Gemini on every keystroke.
+- Use debounce.
+- Recommended debounce approximately 800–1500ms.
+- Ignore very short input.
+- Cancel or ignore outdated requests.
+- Prevent duplicate requests.
+- Cache identical recent requests if practical.
+
+Use:
+
+- Current draft.
+- Recent conversation context.
+- User writing style.
+
+Return exactly 3 short suggestions.
+
+Suggestions must:
+
+- Continue the user's draft.
+- Not repeat the existing draft.
+- Match conversation language.
+- Support English.
+- Support Hindi.
+- Support Hinglish.
+- Match casual tone where appropriate.
+- Match emoji style where appropriate.
+
+==================================================
+24. SMART REPLY REQUIREMENTS
+==================================================
+
+For incoming messages:
+
+Generate exactly 3 concise replies.
+
+Use:
+
+- Latest incoming message.
+- Recent conversation context.
+- User writing style.
+
+Replies should:
+
+- Directly respond to the incoming message.
+- Be short.
+- Be natural.
+- Be meaningfully different.
+- Preserve language and tone.
+
+Display them as quick reply buttons.
+
+Clicking a button:
+
+- Inserts/sends the selected response naturally.
+- Must follow user approval restrictions.
+
+==================================================
+25. AI ERROR HANDLING
+==================================================
+
+AI must never break the chat application.
+
+If Gemini fails:
+
+- Chat must continue working.
+- AI UI must fail gracefully.
+
+Handle:
+
+- 429 rate limit.
+- 503 high demand.
+- Network errors.
+- Invalid AI response.
+- Invalid JSON.
+
+Use retry with exponential backoff where appropriate.
+
+Avoid retrying indefinitely.
+
+Log meaningful errors without exposing secrets.
+
+==================================================
+26. SOCKET.IO EVENTS
+==================================================
+
+Use clear modular Socket.IO events.
+
+Examples may include:
+
+connection
+disconnect
+
+join_room
+leave_room
+
+send_message
+new_message
+
+message_delivered
+message_read
+
+user_presence
+user_last_seen
+
+join_group
+leave_group
+
+group_updated
+
+approval_updated
+
+AI events should only be used if the existing architecture requires socket-based AI interaction.
+
+Otherwise HTTP API calls are acceptable.
+
+Avoid duplicate event listeners.
+
+Clean up listeners on frontend unmount.
+
+==================================================
+27. SECURITY
+==================================================
+
+Implement:
+
+- JWT authentication.
+- Socket authentication.
+- Admin authorization middleware.
+- Group authorization.
+- Ownership validation.
+- Input validation.
+- File validation.
+- Environment variables.
+- Password hashing.
+- Secure password reset tokens.
+- Rate limiting where appropriate.
+
+Never trust frontend role values.
+
+All approval checks must be enforced on backend.
+
+All message restrictions must be enforced server-side.
+
+Frontend restrictions alone are not sufficient.
+
+==================================================
+28. API DESIGN
+==================================================
+
+Create clean APIs.
+
+Examples:
+
+AUTH:
+
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+
+USER:
+
+GET /api/users/me
+PUT /api/users/me
+PUT /api/users/me/profile-photo
+
+CHAT:
+
+GET /api/users/search
+GET /api/messages/:roomId
+POST /api/media/upload
+
+GROUP:
+
+POST /api/groups
+GET /api/groups
+GET /api/groups/:groupId
+PUT /api/groups/:groupId
+POST /api/groups/:groupId/members
+DELETE /api/groups/:groupId/members/:userId
+
+ADMIN:
+
+GET /api/admin/stats
+GET /api/admin/users
+GET /api/admin/users/pending
+PUT /api/admin/users/:userId/approve
+PUT /api/admin/users/:userId/suspend
+PUT /api/admin/users/:userId/revoke-approval
+
+AI:
+
+POST /api/ai/predict
+POST /api/ai/smart-replies
+
+You may adjust endpoint design if the existing project architecture uses a better consistent pattern.
+
+==================================================
+29. NEXT.JS FRONTEND MIGRATION
+==================================================
+
+Migrate frontend carefully.
+
+Do not rewrite backend unnecessarily.
+
+Requirements:
+
+- Reusable components.
+- API service layer.
+- Socket service.
+- Authentication handling.
+- Protected routes.
+- Admin protected routes.
+- Loading states.
+- Error states.
+- Responsive design.
+
+Suggested pages:
+
+/login
+/signup
+/forgot-password
+/reset-password
+
+/chat
+
+/profile
+
+/admin
+
+Admin routes must be protected.
+
+Normal users attempting to access admin pages must be redirected or denied.
+
+==================================================
+30. CHAT SIDEBAR
+==================================================
+
+Create:
+
+Profile section.
+
+Search users.
+
+Personal chat list.
+
+Group chat list.
+
+Unread indicator architecture if practical.
+
+Online indicators.
+
+Create group button.
+
+Admin dashboard shortcut for admin users.
+
+Restricted users should clearly see their approval status.
+
+Example:
+
+Free messages remaining: 4 / 10
+
+After quota:
+
+Approval required
+
+==================================================
+31. RESTRICTION UX
+==================================================
+
+Do not silently disable messaging.
+
+Make restrictions clear.
+
+Before quota exhaustion:
+
+Show:
+
+Free messages remaining: X
+
+At zero:
+
+Show a prominent but non-annoying banner:
+
+"Your free message limit has been reached. Please wait for admin approval to continue messaging."
+
+For groups:
+
+Show group card/message:
+
+"Admin approval will be required to join this group."
+
+For AI:
+
+Show:
+
+"AI suggestions are temporarily unavailable until your account is approved."
+
+Admin chat exception:
+
+The user should still be able to communicate with the administrator.
+
+==================================================
+32. ENVIRONMENT VARIABLES
+==================================================
+
+Document all environment variables.
+
+Example:
+
+PORT=3000
+
+NODE_ENV=development
+
+MONGODB_URI=
+
+JWT_SECRET=
+
+ADMIN_EMAIL=
+
+FRONTEND_URL=
+BACKEND_URL=
+
+AWS_REGION=
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+S3_BUCKET_NAME=
+
+AI_SUGGESTIONS_ENABLED=true
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash-lite
+
+FREE_MESSAGE_LIMIT=10
+
+ARCHIVE_AFTER_HOURS=
+ARCHIVE_CRON_SCHEDULE=
+
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+EMAIL_FROM=
+
+Use environment variables consistently.
+
+Do not hardcode secrets.
+
+==================================================
+33. MONGODB INDEXES
+==================================================
+
+Add appropriate indexes.
+
+Consider indexes for:
+
+Users:
+
+email
+phone
+role
+approvalStatus
+
+Messages:
+
+roomId + createdAt
+
+groupId + createdAt where applicable
+
+Archived messages:
+
+roomId + createdAt
+
+Ensure pagination queries are efficient.
+
+Do not add unnecessary indexes.
+
+==================================================
+34. RENDER DEPLOYMENT
+==================================================
+
+Ensure deployment works on Render.
+
+Backend:
+
+- Bind to process.env.PORT.
+- Correct CORS configuration.
+- Socket.IO production configuration.
+- Environment variable support.
+- MongoDB Atlas connection.
+
+Frontend:
+
+- Correct production API URL.
+- Correct Socket.IO URL.
+- Environment variables through Next.js public variables where appropriate.
+
+Do not expose secrets in NEXT_PUBLIC variables.
+
+Configure:
+
+NEXT_PUBLIC_API_URL
+NEXT_PUBLIC_SOCKET_URL
+
+where appropriate.
+
+Password reset email links must use the production frontend URL.
+
+S3 CORS must be compatible with the deployed frontend if direct browser access is required.
+
+Document complete deployment steps.
+
+==================================================
+35. README REQUIREMENTS
+==================================================
+
+Update README.md professionally.
+
+Include:
+
+1. Project overview.
+2. Features.
+3. Technology stack.
+4. Architecture.
+5. Folder structure.
+6. Local installation.
+7. Environment variables.
+8. MongoDB setup.
+9. AWS S3 setup.
+10. Nodemailer setup.
+11. Gemini setup.
+12. Admin configuration.
+13. Free trial approval flow.
+14. Message quota explanation.
+15. Personal chat.
+16. Group chat.
+17. Online/last seen.
+18. Delivery/read receipts.
+19. Cursor pagination.
+20. Archiving.
+21. Deployment on Render.
+22. Security notes.
+23. Future improvements.
+
+==================================================
+36. TESTING REQUIREMENTS
+==================================================
+
+Before considering implementation complete, verify:
+
+AUTH:
+
+- Signup works.
+- Login works.
+- JWT works.
+- Password hashing works.
+- Forgot password works.
+- Reset password works.
+
+TRIAL:
+
+- New user starts with 10 messages.
+- Counter decreases correctly.
+- 10 messages exactly are allowed.
+- 11th restricted message is blocked.
+- Backend blocks it even if frontend is manipulated.
+- Restricted user can still message admin.
+- Restricted user cannot message arbitrary users.
+- Restricted user cannot join groups.
+- Restricted user cannot send group messages.
+- AI stops after quota exhaustion.
+- Admin approval unlocks features.
+
+ADMIN:
+
+- Admin is determined securely.
+- Normal users cannot access admin APIs.
+- Approval works.
+- User receives update.
+
+CHAT:
+
+- Personal chat works.
+- Room IDs are deterministic.
+- Real-time messages work.
+- Messages persist after refresh.
+- Last 50 messages load initially.
+- Older messages load in batches of 50.
+- Scroll position remains stable.
+- No duplicate messages.
+
+PRESENCE:
+
+- Online works.
+- Offline works.
+- Last seen works.
+- Privacy works.
+
+RECEIPTS:
+
+- Sent works.
+- Delivered works.
+- Read works.
+
+GROUPS:
+
+- Create works.
+- Admin permissions work.
+- Member restrictions work.
+- Pending users cannot join.
+
+MEDIA:
+
+- Upload works.
+- S3 works.
+- Images display.
+- Videos display.
+- Files open/download.
+- Restrictions apply.
+
+AI:
+
+- Predictive typing works.
+- Smart replies work.
+- Personalization works.
+- Personal chat works.
+- Group chat works.
+- AI kill switch works.
+- No unnecessary requests.
+- 429 handled.
+- 503 handled.
+
+DEPLOYMENT:
+
+- Works locally.
+- Works after deployment.
+- Environment variables work.
+- Socket.IO works in production.
+- MongoDB Atlas works.
+- S3 works.
+
+==================================================
+37. FINAL IMPLEMENTATION RULES
+==================================================
+
+DO NOT:
+
+- Remove existing working features.
+- Rewrite everything unnecessarily.
+- Use fake placeholder APIs.
+- Use frontend-only security checks.
+- Hardcode credentials.
+- Load all messages at once.
+- Use offset pagination for the main message history.
+- Call Gemini on every keystroke.
+- Duplicate Socket.IO listeners.
+- Break existing room ID logic.
+- Break existing S3 upload.
+- Break existing archive cron.
+- Break existing AI enable/disable configuration.
+
+DO:
+
+- Refactor incrementally.
+- Keep modules focused.
+- Preserve backward compatibility where possible.
+- Add database migration considerations where schema changes occur.
+- Add indexes for performance.
+- Handle errors gracefully.
+- Keep UI responsive.
+- Keep backend authorization strict.
+- Keep AI usage efficient.
+- Make the final application portfolio quality.
+
+==================================================
+38. IMPLEMENTATION ORDER
+==================================================
+
+Implement in this order:
+
+PHASE 1
+- Inspect existing project.
+- Preserve current functionality.
+- Plan migration.
+
+PHASE 2
+- Refactor backend architecture where necessary.
+- Update models.
+
+PHASE 3
+- Implement user approval/trial quota system.
+- Enforce backend restrictions.
+
+PHASE 4
+- Implement admin dashboard and approval.
+
+PHASE 5
+- Implement profile management.
+
+PHASE 6
+- Implement forgot/reset password.
+
+PHASE 7
+- Implement presence and last seen.
+
+PHASE 8
+- Implement delivery/read receipts.
+
+PHASE 9
+- Implement group management.
+
+PHASE 10
+- Implement cursor pagination and infinite scroll.
+
+PHASE 11
+- Migrate/refactor frontend to Next.js.
+
+PHASE 12
+- Implement WhatsApp-inspired UI/UX.
+
+PHASE 13
+- Integrate existing AI cleanly.
+
+PHASE 14
+- Production/deployment configuration.
+
+PHASE 15
+- Testing and README.
+
+After implementation:
+
+Provide a complete working project.
+
+The application must run using clear commands.
+
+Example:
+
+Backend:
+npm install
+npm run dev
+
+Frontend:
+npm install
+npm run dev
+
+Document all required setup steps.
+
+The final result must be a complete, polished, working real-time chat application, not a partial demonstration.
