@@ -6,6 +6,7 @@ import Link from "next/link";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import StatsGrid from "../../components/admin/StatsGrid";
 import UsersTable from "../../components/admin/UsersTable";
+import ThemeToggle from "../../components/common/ThemeToggle";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import {
@@ -71,7 +72,10 @@ function AdminContent() {
   return (
     <div className="profile-shell">
       <div className="profile-card" style={{ maxWidth: 760 }}>
-        <Link href="/chat" className="back-link">&larr; Back to chat</Link>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/chat" className="back-link" style={{ marginBottom: 0 }}>&larr; Back to chat</Link>
+          <ThemeToggle className="icon-btn-outline" />
+        </div>
         <h1 style={{ fontSize: "1.3rem" }}>Admin dashboard</h1>
 
         {stats && <StatsGrid stats={stats} />}

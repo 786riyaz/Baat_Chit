@@ -1,9 +1,34 @@
 :root {
+  /* Brand chrome (sidebar, accent) stays constant across both themes -
+     only the canvas/panel/text surfaces switch between dark and light. */
   --ink: #14232b;
-  --ink-soft: #1f373f;
+  --ink-soft-rrr: #1f373f;
+  --ink-soft: #93a29c;
+  --accent: #c98a2c;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+
+  /* Dark theme (default) */
+  --canvas: #101c21;
+  --panel: #1b2a30;
+  --accent-deep: #dba454;
+  --line: #2c3d43;
+  --border: var(--line);
+  --text: #e7ece9;
+  --text-muted: #93a29c;
+  --danger: #e2604a;
+  --danger-bg: #3a1f1a;
+  --success: #6fbf94;
+  --success-bg: #172b21;
+  --warning: #e0ad5c;
+  --warning-bg: #3a2e18;
+}
+
+[data-theme="light"] {
   --canvas: #eef2f1;
   --panel: #ffffff;
-  --accent: #c98a2c;
   --accent-deep: #a66b1e;
   --line: #dce3e0;
   --border: var(--line);
@@ -13,10 +38,8 @@
   --danger-bg: #fbe9e4;
   --success: #3a6b53;
   --success-bg: #e9f2ea;
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Fraunces", Georgia, serif;
+  --warning: #9a6a1c;
+  --warning-bg: #fdf1de;
 }
 
 * {
@@ -76,6 +99,12 @@ select {
   padding: 56px;
   position: relative;
   overflow: hidden;
+}
+
+.auth-theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .auth-brand-pane h1 {
@@ -273,6 +302,7 @@ select:focus {
 .sidebar {
   width: 340px;
   flex-shrink: 0;
+  min-height: 0;
   background: var(--ink);
   color: #eef0ee;
   display: flex;
@@ -360,6 +390,19 @@ select:focus {
 
 .icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.icon-btn-outline {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+.icon-btn-outline:hover {
+  border-color: var(--accent);
 }
 
 .search-row {
@@ -471,6 +514,7 @@ select:focus {
   flex-direction: column;
   background: var(--canvas);
   min-width: 0;
+  min-height: 0;
 }
 
 .chat-header {
@@ -604,7 +648,7 @@ select:focus {
 }
 
 .trial-banner.info {
-  background: #eef4ee;
+  background: var(--success-bg);
   color: var(--success);
   border-bottom: 1px solid var(--line);
 }
@@ -652,6 +696,7 @@ select:focus {
   border: 1px solid var(--line);
   background: var(--canvas);
   max-height: 120px;
+  color: var(--ink-soft);
 }
 
 .message-input-row textarea:disabled {
@@ -799,8 +844,8 @@ select:focus {
 }
 
 .trial-pill.pending {
-  background: #fdf1de;
-  color: #9a6a1c;
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .trial-pill.approved {
@@ -818,20 +863,25 @@ select:focus {
   .auth-layout {
     flex-direction: column;
   }
+
   .auth-brand-pane {
     padding: 32px 24px;
     flex: none;
   }
+
   .auth-brand-pane h1 {
     font-size: 1.7rem;
     max-width: none;
   }
+
   .auth-brand-bubbles {
     display: none;
   }
+
   .chat-shell {
     position: relative;
   }
+
   .sidebar {
     position: absolute;
     inset: 0;
@@ -839,15 +889,19 @@ select:focus {
     z-index: 10;
     transition: transform 0.2s ease;
   }
+
   .sidebar.hidden-mobile {
     transform: translateX(-100%);
   }
+
   .chat-main {
     width: 100%;
   }
+
   .bubble {
     max-width: 80%;
   }
+
   .back-to-list {
     display: inline-flex !important;
   }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Avatar from "../common/Avatar";
+import ThemeToggle from "../common/ThemeToggle";
 
 function lastSeenLabel(user) {
   if (user.isOnline) return "Online";
@@ -67,6 +68,7 @@ export default function Sidebar({
             <Link href="/admin" className="icon-btn" title="Admin dashboard">&#128274;</Link>
           )}
           <Link href="/profile" className="icon-btn" title="Profile">&#9881;</Link>
+          <ThemeToggle />
           <button className="icon-btn" title="Log out" onClick={onLogout}>&#8677;</button>
         </div>
       </div>

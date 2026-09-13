@@ -270,7 +270,7 @@ function ChatContent() {
         mobileHidden={mobileSidebarHidden}
         canUseGroups={canUseGroups}
       />
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }}>
         <TrialBanner user={user} />
         <ChatWindow
           user={user}

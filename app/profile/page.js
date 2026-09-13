@@ -6,6 +6,7 @@ import AvatarUploader from "../../components/profile/AvatarUploader";
 import ProfileDetailsForm from "../../components/profile/ProfileDetailsForm";
 import PasswordForm from "../../components/profile/PasswordForm";
 import TrialStatusBadge from "../../components/profile/TrialStatusBadge";
+import ThemeToggle from "../../components/common/ThemeToggle";
 import { useAuth } from "../../hooks/useAuth";
 
 function ProfileContent() {
@@ -14,7 +15,10 @@ function ProfileContent() {
   return (
     <div className="profile-shell">
       <div className="profile-card">
-        <Link href="/chat" className="back-link">&larr; Back to chat</Link>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/chat" className="back-link" style={{ marginBottom: 0 }}>&larr; Back to chat</Link>
+          <ThemeToggle className="icon-btn-outline" />
+        </div>
         <AvatarUploader user={user} onUpdated={setUser} />
         <div style={{ marginBottom: 20 }}>
           <TrialStatusBadge user={user} />

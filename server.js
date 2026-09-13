@@ -35,6 +35,8 @@ resolveSignupStatus,
 canSendMessage,
 canJoinOrCreateGroup,
 consumeTrialMessageIfNeeded,
+ensureAdminRoleSynced,
+getAdminEmail,
 trialSummary,
 sanitizePublicUser
 } = require("./server/services/approvalService");
@@ -132,6 +134,7 @@ success: false,
 message: "Invalid email/phone or password"
 });
 }
+await ensureAdminRoleSynced(user);
 const token = jwt.sign(
 {
 userId: user._id.toString(),

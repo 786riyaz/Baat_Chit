@@ -1,5 +1,7 @@
 "use client";
 
+import ThemeToggle from "./ThemeToggle";
+
 const COPY = {
   login: {
     headline: "Pick up right where you left off",
@@ -24,6 +26,7 @@ export default function AuthLayout({ variant, children }) {
   return (
     <div className="auth-layout">
       <div className="auth-brand-pane">
+        <ThemeToggle className="icon-btn auth-theme-toggle" />
         <h1>{copy.headline}</h1>
         <p>{copy.body}</p>
         <div className="auth-brand-bubbles" aria-hidden="true">

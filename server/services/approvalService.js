@@ -112,6 +112,20 @@ function trialSummary(user) {
   };
 }
 
+// If ADMIN_EMAIL was set (or changed) after this account already existed,
+// role/approvalStatus can drift out of sync with it - this re-derives both
+// from the current env var and fixes the stored record whenever it's out of
+// sync, so admin access self-heals without a manual migration step.
+async function ensureAdminRoleSynced(user) {
+  if (!user) return user;
+  if (isAdminEmail(user.email) && (user.role !== "admin" || user.approvalStatus !== "approved")) {
+    user.role = "admin";
+    user.approvalStatus = "approved";
+    await user.save();
+  }
+  return user;
+}
+
 function sanitizePublicUser(user) {
   return {
     id: user._id,
@@ -141,6 +155,7 @@ module.exports = {
   canUseAi,
   canJoinOrCreateGroup,
   consumeTrialMessageIfNeeded,
+  ensureAdminRoleSynced,
   trialSummary,
   sanitizePublicUser
 };
