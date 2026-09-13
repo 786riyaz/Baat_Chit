@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "nodemon --watch server.js --watch server --ext js,json server.js",
     "build": "next build",
-    "start": "cross-env NODE_ENV=production node server.js",
+    "test": "cross-env NODE_ENV=production node server.js",
+    "start": "node server.js",
     "migrate:approval": "node server/scripts/migrateExistingUsers.js"
   },
   "dependencies": {
