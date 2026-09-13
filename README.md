@@ -1,670 +1,285 @@
-# 💬 Real-Time Chat Application
+# Chat App
 
-A full-stack real-time chat application built with **Node.js, Express, MongoDB, Socket.IO, AWS S3, and Google Gemini AI**.
+A WhatsApp-inspired, real-time chat application. Personal and group
+messaging, media sharing, AI-assisted replies, an approval/free-trial system
+for new users, and an admin dashboard - all as one Next.js project with a
+custom server that also runs the Express API and Socket.IO.
 
-The project was developed incrementally through multiple exercises, starting with authentication and a basic chat UI and progressing to real-time messaging, personal chats, group chats, multimedia sharing, message archiving, deployment, and AI-powered chat suggestions.
-
----
-
-## ✨ Features
-
-### 🔐 Authentication
-
-- User signup with:
-  - Name
-  - Email
-  - Phone number
-  - Password
-- Passwords are securely hashed using `bcryptjs` before being stored.
-- Login using either:
-  - Email, or
-  - Phone number
-- JWT-based authentication for protected REST APIs.
-- JWT authentication for Socket.IO connections.
-
----
-
-## 💬 Real-Time Chat
-
-- Real-time messaging using Socket.IO.
-- Messages appear instantly without refreshing the page.
-- Messages are stored in MongoDB.
-- Previous messages are loaded when a chat is opened or refreshed.
-- Message timestamps are displayed in the chat interface.
-- Scroll-friendly chat window.
-
----
-
-## 👤 Personal Chat
-
-Users can start a private conversation with another registered user.
-
-### Personal room ID generation
-
-A deterministic room ID is generated from both users' email addresses.
-
-Example:
-
-```text
-userA@example.com + userB@example.com
 ```
-
-and:
-
-```text
-userB@example.com + userA@example.com
-```
-
-produce the same room ID because both email addresses are normalized and sorted before being combined.
-
-This ensures that two users always connect to the same personal conversation regardless of who starts the chat.
-
-### User validation
-
-Before joining a personal chat, the application validates that the entered email belongs to an existing user in MongoDB.
-
----
-
-## 👥 Group Chat
-
-- Create chat groups.
-- Add registered users as members.
-- Each group has its own unique room ID.
-- Group membership is validated before users can access group conversations.
-- Messages are broadcast only to users connected to the relevant group room.
-
----
-
-## 🔌 Socket.IO Architecture
-
-The Socket.IO implementation is organized into modular components.
-
-```text
-socket/
-└── handlers/
-    ├── chat.js
-    └── personalChat.js
-```
-
-Socket authentication and event handling are separated from the main server logic to keep the backend easier to maintain and extend.
-
-Socket authentication identifies the connected user using their JWT token.
-
-The server can then associate each socket connection with the authenticated user.
-
----
-
-## 🖼️ Multimedia and File Sharing
-
-The application supports sharing multiple file types inside chats.
-
-Supported categories include:
-
-- Images
-- Videos
-- Audio files
-- PDF files
-- Text files
-- ZIP files
-- Word documents
-- Excel files
-- PowerPoint files
-
-### File upload flow
-
-```text
-User selects a file
-        ↓
-Frontend validates file
-        ↓
-File is sent to backend
-        ↓
-Multer processes the upload
-        ↓
-Backend uploads the file to AWS S3
-        ↓
-S3 URL is returned
-        ↓
-Message containing media information is stored in MongoDB
-        ↓
-Socket.IO sends the message to the relevant room
-        ↓
-Connected users receive the media instantly
-```
-
-### Upload protection
-
-The backend includes:
-
-- File type validation
-- Maximum file size validation
-- Maximum file count limits
-- Upload error handling
-- Retry-friendly frontend behavior
-
-The configured maximum file size is currently **25 MB per file**.
-
----
-
-## ☁️ AWS S3 Media Storage
-
-Media files are stored in Amazon S3 instead of MongoDB.
-
-MongoDB stores metadata such as:
-
-```text
-S3 object key
-File URL
-Original file name
-MIME type
-File size
-```
-
-This keeps the database focused on application data while object storage handles multimedia files.
-
----
-
-## 🗄️ MongoDB Message Storage
-
-Active messages are stored in the `Message` collection.
-
-A message contains information such as:
-
-- Chat type (`personal` or `group`)
-- Room ID
-- Group ID when applicable
-- Sender ID
-- Text content
-- Media metadata
-- Creation timestamp
-- Update timestamp
-
-Important indexing is used for chat queries:
-
-```text
-roomId + createdAt
-```
-
-This helps efficiently retrieve messages for a specific conversation in chronological order.
-
----
-
-## 📦 Message Archiving for Scalability
-
-As a chat application grows, the active message collection can become very large.
-
-To reduce the size of the active chat collection, the application includes a cron-based archive system.
-
-### Archive flow
-
-```text
-Active Message Collection
-        ↓
-Messages older than configured duration
-        ↓
-Copied to ArchivedChat Collection
-        ↓
-Archive write succeeds
-        ↓
-Original messages are deleted from Message Collection
-```
-
-The application uses a safer archive-first approach:
-
-1. Old messages are selected in batches.
-2. Messages are written to `ArchivedChat` using upsert operations.
-3. Active messages are deleted only after the archive write succeeds.
-
-This reduces the risk of losing messages during the archival process.
-
-### Archive configuration
-
-```env
-ARCHIVE_AFTER_HOURS=24
-ARCHIVE_BATCH_SIZE=1000
-ARCHIVE_CRON_SCHEDULE=0 0 * * *
-```
-
-The values can be changed for testing or production requirements.
-
-Example:
-
-```env
-ARCHIVE_AFTER_HOURS=1
-ARCHIVE_CRON_SCHEDULE=0 * * * *
-```
-
-This configuration checks every hour and archives messages older than one hour.
-
----
-
-# 🤖 AI-Powered Chat Suggestions
-
-The final version integrates **Google Gemini AI** to provide intelligent chat assistance.
-
-The AI features are completely optional and can be enabled or disabled using an environment variable.
-
----
-
-## ✍️ Predictive Typing
-
-While the user is typing a message, the application can generate possible continuations.
-
-Example:
-
-```text
-User types:
-Let's meet at
-```
-
-Possible suggestions:
-
-```text
-5 pm
-The office
-tomorrow morning
-```
-
-### Predictive typing behavior
-
-- Uses debounce to avoid making an API request for every keystroke.
-- Waits approximately **850 ms** after typing pauses.
-- Uses recent conversation context.
-- Uses the current message draft.
-- Returns concise phrase completions.
-- Returns exactly three suggestions.
-- Avoids repeating the text already typed by the user.
-- Attempts to preserve the user's language and communication style.
-
-Clicking a suggestion appends it to the current message input.
-
----
-
-## ⚡ Smart Replies
-
-When a new incoming text message is received, the application can generate quick reply options.
-
-Example:
-
-```text
-Incoming message:
-Are you coming to the meeting?
-```
-
-Possible smart replies:
-
-```text
-Yes, I'll be there.
-Running a little late.
-Can we reschedule it?
-```
-
-### Smart reply behavior
-
-- Generates exactly three short replies.
-- Uses recent conversation context.
-- Attempts to match the user's natural communication style.
-- Supports English, Hindi, and Hinglish conversations.
-- Provides quick-select buttons in the UI.
-- Clicking a smart reply places it in the message input so the user can review or edit it before sending.
-
----
-
-## 🎯 AI Personalization
-
-The application provides lightweight personalization without storing a separate AI personality profile.
-
-The backend analyzes recent messages written by the current user and provides them to Gemini as writing-style examples.
-
-This can help the AI adapt to patterns such as:
-
-- Casual language
-- Formal language
-- Hinglish
-- Emoji usage
-- Short replies
-- Longer conversational responses
-
-Example style:
-
-```text
-Haan bhai aa raha hu 😂
-Thoda late ho jaunga yaar
-Office ke baad milte hain
-```
-
-The AI can use this context to generate more natural suggestions for that user.
-
----
-
-## 🧠 Prompt Architecture
-
-AI prompts are intentionally separated from Gemini API logic.
-
-```text
-prompts/
-└── geminiPrompts.js
-```
-
-This allows the predictive typing and smart reply instructions to be modified without changing:
-
-- API routes
-- Gemini service logic
-- Authentication logic
-- Retry logic
-- Socket.IO logic
-
-This makes prompt experimentation much easier.
-
----
-
-## 🛡️ AI Kill Switch
-
-AI suggestions can be completely enabled or disabled from the `.env` file.
-
-### Enable AI
-
-```env
-AI_SUGGESTIONS_ENABLED=true
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-### Disable AI
-
-```env
-AI_SUGGESTIONS_ENABLED=false
-```
-
-When AI is disabled:
-
-- No Gemini suggestions are requested.
-- The application continues to function normally.
-- No Gemini API calls are made.
-- The rest of the chat application remains unaffected.
-
-This is useful when the AI feature is required only for demonstration or testing.
-
----
-
-## 🔄 Gemini Error Handling
-
-AI services can temporarily become unavailable because of rate limits or high demand.
-
-The application includes graceful handling for temporary failures such as:
-
-```text
-429 Too Many Requests
-503 Service Unavailable
-```
-
-The backend uses retry logic with exponential backoff before returning an unavailable result.
-
-If Gemini remains unavailable, the chat application continues working normally without breaking the messaging experience.
-
----
-
-# 🏗️ Project Structure
-
-```text
-socketio-chat-exercise-18/
-│
-├── jobs/
-│   └── archiveChats.js
-│
-├── middleware/
-│   ├── auth.js
-│   └── upload.js
-│
-├── models/
-│   ├── ArchivedChat.js
-│   ├── Group.js
-│   ├── Message.js
-│   └── User.js
-│
-├── prompts/
-│   └── geminiPrompts.js
-│
-├── public/
-│   ├── app.js
-│   ├── index.html
-│   └── style.css
-│
-├── routes/
-│   └── aiRoutes.js
-│
-├── services/
-│   ├── geminiService.js
-│   └── s3.js
-│
-├── socket/
-│   └── handlers/
-│       ├── chat.js
-│       └── personalChat.js
-│
-├── utils/
-│   └── room.js
-│
-├── .env.example
-├── package.json
-├── render.yaml
-├── README.md
-└── server.js
-```
-
----
-
-# 🛠️ Technology Stack
-
-## Backend
-
-- Node.js
-- Express.js
-
-## Database
-
-- MongoDB
-- Mongoose
-
-## Authentication
-
-- JWT
-- bcryptjs
-
-## Real-Time Communication
-
-- Socket.IO
-
-## File Uploads
-
-- Multer
-
-## Cloud Storage
-
-- AWS S3
-- AWS SDK for JavaScript
-
-## Background Jobs
-
-- cron
-
-## Artificial Intelligence
-
-- Google Gemini API
-- `@google/genai`
-
-## Deployment
-
-- Render
-
----
-
-# ⚙️ Installation
-
-Clone the repository:
-
-```bash
-git clone <your-repository-url>
-```
-
-Move into the project folder:
-
-```bash
-cd socketio-chat-exercise-18
-```
-
-Install dependencies:
-
-```bash
 npm install
-```
-
-Create a `.env` file using `.env.example` as a reference.
-
-Start the development server:
-
-```bash
+cp .env.example .env   # fill in real values
 npm run dev
 ```
 
-The application will run on:
+Open http://localhost:3000. One command, one process, one port.
 
-```text
-http://localhost:3000
+---
+
+## 1. Project overview
+
+New users sign up and get a 10-message free trial across every kind of
+messaging (personal, group, and media combined). Once that runs out, they
+can still view their existing chats and message the app's admin directly,
+but need admin approval to message anyone else, join groups, or use AI
+suggestions again. Admins manage approvals from a built-in dashboard.
+
+Beyond that: real-time personal and group chat, image/video/file sharing via
+S3, delivery/read receipts, online/last-seen presence, cursor-based message
+pagination with infinite scroll, Gemini-powered predictive typing and smart
+replies, and scheduled message archiving.
+
+## 2. Features
+
+- Signup/login (email or phone) with JWT auth and bcrypt password hashing
+- Forgot/reset password via Nodemailer, with hashed/expiring tokens
+- Profile management: name, phone, bio, avatar (S3), last-seen privacy
+- Free-trial + admin-approval system, enforced server-side everywhere
+- Personal chat with deterministic room IDs (sorted-email based)
+- Group chat: create, settings, add/remove members, promote/demote admins, leave
+- Image, video, and general file sharing via AWS S3
+- Delivery and read receipts (sent / delivered / read)
+- Online presence and last-seen, respecting a per-user privacy setting
+- Cursor-based message pagination (never offset-based) with infinite scroll
+- Gemini AI predictive typing and smart replies, with retry/backoff and a
+  hard environment kill switch
+- Scheduled message archiving (cron) into a separate collection
+- Admin dashboard: stats, pending-approval queue, user search, approve/
+  suspend/reject/revoke actions
+
+## 3. Technology stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | Next.js (App Router), plain JavaScript, Socket.IO client |
+| Backend | Node.js, Express, Socket.IO |
+| Database | MongoDB + Mongoose |
+| Auth | JWT, bcrypt |
+| Media | AWS S3 |
+| Email | Nodemailer (Gmail SMTP by default) |
+| AI | Google Gemini API |
+| Deployment | Render, MongoDB Atlas, AWS S3 |
+
+## 4. Architecture
+
+One Node process runs everything. `server.js` creates a Next.js app
+instance, mounts every Express API route under `/api/*`, adds a catch-all
+route that hands anything else to Next.js's page renderer, and attaches
+Socket.IO to the same underlying `http.Server`. See
+`docs/CHANGELOG-phase11-unify.md`-equivalent detail in this README's
+folder-structure section below for exactly how that's wired.
+
+There is no CORS configuration because there is no cross-origin request to
+make - the frontend and API are the same origin.
+
+## 5. Folder structure
+
+```
+chat-app/
+├── server.js              custom server: Next.js + Express + Socket.IO, one process
+├── package.json
+├── .env.example
+├── render.yaml
+├── next.config.js
+│
+├── app/                   Next.js App Router pages (thin route wrappers)
+│   ├── login/, signup/, forgot-password/, reset-password/
+│   ├── chat/, profile/, admin/
+│   └── layout.js, globals.css
+├── components/
+│   ├── auth/               LoginForm, SignupForm, ForgotPasswordForm, ResetPasswordForm
+│   ├── chat/                Sidebar, ChatWindow, MessageBubble, TrialBanner
+│   ├── groups/               CreateGroupModal, GroupSettingsModal
+│   ├── profile/               AvatarUploader, ProfileDetailsForm, PasswordForm, TrialStatusBadge
+│   ├── admin/                  StatsGrid, UsersTable
+│   └── common/                  Avatar, ProtectedRoute, AuthLayout
+├── hooks/                  useAuth (session + live socket sync), useToast
+├── services/                api, auth, socket, groups, admin (frontend API/socket clients)
+├── utils/                    room.js (mirrors the backend's room-ID algorithm)
+│
+└── server/                    the Express/Socket.IO backend
+    ├── models/                 User, Message, Group, ArchivedChat, PasswordReset
+    ├── middleware/             auth, adminMiddleware, upload, uploadAvatar
+    ├── services/               approvalService, s3, mailService, geminiService,
+    │                            roomAccessService, messageHistoryService, presenceService
+    ├── socket/handlers/        chat.js, presence.js, receipts.js
+    ├── routes/                 aiRoutes.js
+    ├── jobs/                   archiveChats.js (cron)
+    ├── scripts/                migrateExistingUsers.js
+    ├── config/                 mail.js
+    ├── prompts/                geminiPrompts.js
+    └── utils/                  room.js, rateLimiter.js
 ```
 
----
+## 6. Local installation
 
-# 🔑 Environment Variables
-
-Example:
-
-```env
-PORT=3000
-
-MONGODB_URI=mongodb://127.0.0.1:27017/whatsapp_clone
-
-JWT_SECRET=replace_with_a_long_random_secret
-
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-S3_BUCKET_NAME=your_bucket_name
-
-NODE_ENV=development
-
-# Message archiving
-ARCHIVE_AFTER_HOURS=24
-ARCHIVE_BATCH_SIZE=1000
-ARCHIVE_CRON_SCHEDULE=0 0 * * *
-
-# Gemini AI
-AI_SUGGESTIONS_ENABLED=false
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-3.5-flash-lite
+```
+git clone <your repo>
+cd chat-app
+cp .env.example .env
+npm install
+npm run dev
 ```
 
-> **Important:** Never commit your real `.env` file, API keys, JWT secrets, AWS credentials, or database credentials to GitHub.
+Requires Node 18.18+, a MongoDB instance (local or Atlas), and - for the
+features that need them - AWS S3 credentials and SMTP credentials. The app
+runs and the chat/auth core works without AI or S3/SMTP configured; those
+features degrade gracefully (see sections 9-11).
+
+## 7. Environment variables
+
+All variables live in one `.env` file at the project root (see
+`.env.example` for the full list with comments). Highlights:
+
+| Variable | Purpose |
+|---|---|
+| `PORT` | Port for the single unified server (default 3000) |
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | Signs auth tokens - use a long random value |
+| `ADMIN_EMAIL` | Signing up with this email auto-grants admin/approved |
+| `FREE_MESSAGE_LIMIT` | Trial message quota for new users (default 10) |
+| `AWS_*`, `S3_BUCKET_NAME` | Media uploads |
+| `SMTP_*`, `EMAIL_FROM` | Password-reset emails |
+| `FRONTEND_URL` | This app's own public URL - used to build reset-password links |
+| `RESET_TOKEN_EXPIRY_MINUTES` | Password-reset link lifetime (default 15) |
+| `AI_SUGGESTIONS_ENABLED` | Hard kill switch for all Gemini calls |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | AI predictive typing/smart replies |
+| `ARCHIVE_*` | Message-archiving cron schedule/batch size |
+
+## 8. MongoDB setup
+
+Any MongoDB 5+ instance works - local `mongod` for development, MongoDB
+Atlas for production (a free-tier cluster is enough to start). Put the
+connection string in `MONGODB_URI`. Indexes are declared in the Mongoose
+schemas and created automatically on first connection.
+
+If you have existing users from before the approval/trial system existed,
+run `npm run migrate:approval` once against that database - it grandfathers
+existing users in as fully approved instead of dropping them into the new
+trial flow. Fresh databases don't need this.
+
+## 9. AWS S3 setup
+
+Create a bucket, an IAM user with `PutObject`/`GetObject` permissions scoped
+to that bucket, and set `AWS_REGION`, `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`. Without these set, media upload
+requests will fail with a clear error - everything else in the app still works.
+
+## 10. Nodemailer setup
+
+Default config targets Gmail SMTP (`smtp.gmail.com:587`). Gmail requires a
+**Google App Password** (Google Account → Security → 2-Step Verification →
+App Passwords, with 2FA enabled) in `SMTP_PASS` - a normal Gmail password is
+rejected. Without SMTP configured, forgot-password requests still return a
+generic success response (never leaking whether an email exists) but no
+email is actually sent - logged server-side, not surfaced to the user.
+
+## 11. Gemini setup
+
+Set `GEMINI_API_KEY` and `AI_SUGGESTIONS_ENABLED=true`. `GEMINI_MODEL`
+defaults to `gemini-3.5-flash-lite`. With the kill switch off (the default),
+zero Gemini requests are made regardless of anything else. Retries with
+backoff handle 429/503 automatically; AI failures never break chat itself.
+
+## 12. Admin configuration
+
+Set `ADMIN_EMAIL` before anyone signs up with that address - that signup
+automatically becomes `role: "admin"`, fully approved, unlimited everything.
+Admin status can never be granted from the frontend; it's decided purely by
+matching this env var at signup time, server-side. The admin dashboard lives
+at `/admin` and redirects non-admin users away.
+
+## 13. Free-trial / approval flow
+
+A new signup starts `role: "user"`, `approvalStatus: "pending"`,
+`trialMessageCount: 0`. Every personal message, group message, and media
+upload increments that counter against `FREE_MESSAGE_LIMIT` (default 10) -
+one shared quota, not per-conversation. Once exhausted, the user can still:
+view existing chats, receive incoming messages, update their profile, and
+message the admin directly with no limit. Everything else (new personal
+chats, group messages, joining/creating groups, AI) requires admin approval.
+All of this is enforced server-side - the frontend UI reflects it, but never
+decides it.
+
+## 14. Personal chat
+
+Room IDs are deterministic: both participants' emails are lowercased,
+sorted, and joined with `::`, so it's identical regardless of who starts the
+conversation. The frontend computes the same ID client-side to request a
+join; the server independently re-derives and validates it before allowing
+access.
+
+## 15. Group chat
+
+Any approved/admin user can create a group and add other approved/admin
+users as members (a pending user needing approval can't be added, and can't
+create or join a group themselves). Group admins - the creator plus anyone
+promoted - manage members, settings, and the group photo; the creator can
+never be removed or demoted by someone else.
+
+## 16. Online/last seen
+
+Presence updates broadcast only to actual contacts (people you've messaged
+or share a group with), not globally. A user with `lastSeenPrivacy: "nobody"`
+shows neither online status nor last-seen time to anyone else.
+
+## 17. Delivery/read receipts
+
+Every socket auto-joins all of its rooms on connect (not just whichever one
+the UI has open), so delivery can be marked the instant a message reaches a
+connected client - independent of whether that chat is actively open.
+Read receipts fire when a room is opened or a message arrives while it's
+already open. Group receipts use the same delivered/read arrays as personal
+chats (an aggregate state), not a detailed per-member read list.
+
+## 18. Cursor pagination
+
+Message history loads 50 at a time, newest page first, using a timestamp
+cursor - never offset-based, so it stays fast and correct no matter how much
+history a room accumulates. Scrolling to the top of a chat loads the next
+older page and preserves scroll position.
+
+## 19. Archiving
+
+A cron job (`ARCHIVE_CRON_SCHEDULE`, default nightly) moves messages older
+than `ARCHIVE_AFTER_HOURS` into a separate `ArchivedChat` collection, keeping
+the active `Message` collection lightweight. Message history views
+transparently merge both collections, so archived history is never lost
+from the user's perspective.
+
+## 20. Deployment on Render
+
+`render.yaml` defines one web service - build command
+`npm install && npm run build`, start command `npm run start`. Set every
+`sync: false` variable in the Render dashboard (Mongo URI, AWS/SMTP
+credentials, admin email, etc.) before or after the first deploy. `PORT` is
+provided by Render automatically. `FRONTEND_URL` should be set to this
+service's own Render URL once you know it - it's used for password-reset
+email links.
+
+Because this is one unified service, there is no second frontend deployment
+and no CORS configuration to manage - a real simplification versus a
+split frontend/backend deployment.
+
+## 21. Security notes
+
+- All approval/trial/role checks are enforced server-side and re-read from
+  the database on every request - the frontend's UI state is never trusted.
+- Passwords are bcrypt-hashed; reset tokens are stored only as a SHA-256
+  hash with a TTL index for automatic expiry.
+- Forgot-password never reveals whether an email is registered, and is
+  rate-limited (5 requests per 15 minutes per IP+email).
+- Admin status can only be granted by matching `ADMIN_EMAIL` at signup - never
+  from client input.
+- File uploads are validated by type and size before reaching S3.
+
+## 22. Future improvements
+
+- Detailed per-member group read receipts (currently an aggregate state)
+- Push notifications for messages received while the app isn't open
+- Rich text / message editing and deletion
+- A Redis-backed rate limiter if this ever runs across multiple instances
 
 ---
 
-# 🚀 Deployment
-
-The application can be deployed to Render.
-
-Before deployment, configure the required environment variables in the Render dashboard:
-
-- `MONGODB_URI`
-- `JWT_SECRET`
-- `AWS_REGION`
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `S3_BUCKET_NAME`
-- `AI_SUGGESTIONS_ENABLED`
-- `GEMINI_API_KEY` (only when AI is enabled)
-- `GEMINI_MODEL`
-
-The application uses:
-
-```javascript
-process.env.PORT || 3000
-```
-
-which allows the hosting platform to provide the production port.
-
----
-
-# 🧪 Running Without AI
-
-The complete chat application works even when Gemini is disabled.
-
-Use:
-
-```env
-AI_SUGGESTIONS_ENABLED=false
-```
-
-You can still use:
-
-- Authentication
-- Personal chat
-- Group chat
-- Real-time messaging
-- MongoDB message persistence
-- Multimedia sharing
-- AWS S3 uploads
-- Message archiving
-
-Only AI predictive typing and smart replies are disabled.
-
----
-
-# 🎓 Exercises Covered
-
-This final project combines the functionality developed throughout the chat application exercises, including:
-
-1. Signup and Login UI
-2. Signup and Login Backend APIs
-3. Chat Window UI
-4. Store Messages in Database
-5. Fetch Messages from Database
-6. Live Messages
-7. Socket.IO Frontend Integration
-8. Socket.IO Backend Integration
-9. Socket Authentication
-10. Socket Server Folder Structure and Refactoring
-11. Personal Messages – Part 1
-12. Personal Messages – Part 2
-13. Connecting Users with Deterministic Rooms
-14. Group Chat and Best Practices
-15. Media Sharing with AWS S3
-16. Multimedia Chat Handling
-17. Message Archiving and Scalability Optimization
-18. AI-Powered Predictive Typing and Smart Replies with Gemini
-
----
-
-# 🔮 Possible Future Improvements
-
-Possible extensions include:
-
-- Read receipts
-- Typing indicators
-- Online/offline presence
-- Push notifications
-- Message editing
-- Message deletion
-- Pagination for old and archived messages
-- Redis adapter for horizontally scaled Socket.IO servers
-- Multiple server instances
-- CDN integration for media
-- Pre-signed S3 upload URLs
-- Better AI user profiles
-- Conversation summarization
-- AI moderation
-
----
-
-# 📄 Notes
-
-This project is designed as a learning project demonstrating the evolution of a modern chat application from basic authentication to real-time communication, cloud media storage, database optimization, and AI-assisted messaging.
+See `docs/CHANGELOG-phase*.md` for the detailed history and assumptions
+behind each phase, and `docs/TESTING.md` for a testing checklist.

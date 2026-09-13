@@ -1,28 +1,69 @@
 services:
-- type: web
-name: socketio-chat-exercise-18
-runtime: node
-buildCommand: npm install
-startCommand: npm start
-healthCheckPath: /
-envVars:
-- key: NODE_ENV
-value: production
-- key: MONGODB_URI
-sync: false
-- key: JWT_SECRET
-generateValue: true
-- key: AWS_REGION
-sync: false
-- key: AWS_ACCESS_KEY_ID
-sync: false
-- key: AWS_SECRET_ACCESS_KEY
-sync: false
-- key: S3_BUCKET_NAME
-sync: false
-- key: AI_SUGGESTIONS_ENABLED
-value: false
-- key: GEMINI_API_KEY
-sync: false
-- key: GEMINI_MODEL
-value: gemini-3.5-flash-lite
+  - type: web
+    name: chat-app
+    runtime: node
+    plan: starter
+    # Next.js needs a production build before `next start` will serve it -
+    # the old two-server setup didn't need a build step for the vanilla
+    # frontend, so this is new versus the original render.yaml.
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+
+      - key: ARCHIVE_AFTER_HOURS
+        value: "24"
+      - key: ARCHIVE_BATCH_SIZE
+        value: "1000"
+      - key: ARCHIVE_CRON_SCHEDULE
+        value: "0 0 * * *"
+
+      - key: AI_SUGGESTIONS_ENABLED
+        value: "false"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+
+      # Any signup using this exact email becomes role=admin, approvalStatus=approved.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: FREE_MESSAGE_LIMIT
+        value: "10"
+
+      # This service's own public URL (Render fills in the real one, e.g.
+      # https://chat-app.onrender.com) - used both for password-reset email
+      # links and, now that frontend+backend are one service, there's no
+      # separate CORS origin to configure.
+      - key: FRONTEND_URL
+        sync: false
+      - key: RESET_TOKEN_EXPIRY_MINUTES
+        value: "15"
+
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
