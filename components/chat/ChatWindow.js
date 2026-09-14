@@ -28,6 +28,7 @@ export default function ChatWindow({
 }) {
   const [draft, setDraft] = useState("");
   const [pendingFile, setPendingFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [sending, setSending] = useState(false);
   const [predictions, setPredictions] = useState([]);
   const [smartReplies, setSmartReplies] = useState([]);
@@ -136,7 +137,8 @@ export default function ChatWindow({
     setSending(true);
     try {
       if (pendingFile) {
-        await onSendMedia(pendingFile, draft.trim());
+        setUploadProgress(0);
+        await onSendMedia(pendingFile, draft.trim(), setUploadProgress);
       } else {
         await onSend(draft.trim());
       }
@@ -145,6 +147,7 @@ export default function ChatWindow({
       setPredictions([]);
     } finally {
       setSending(false);
+      setUploadProgress(null);
     }
   }
 
@@ -223,11 +226,18 @@ export default function ChatWindow({
       )}
 
       {pendingFile && (
-        <div className="ai-chip-row">
+        <div className="ai-chip-row" style={{ alignItems: "center" }}>
           <span className="chip">
             {pendingFile.name}
-            <button type="button" onClick={() => setPendingFile(null)}>&times;</button>
+            {uploadProgress === null && (
+              <button type="button" onClick={() => setPendingFile(null)}>&times;</button>
+            )}
           </span>
+          {uploadProgress !== null && (
+            <div className="upload-progress" aria-label={`Uploading ${uploadProgress}%`}>
+              <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          )}
         </div>
       )}
 

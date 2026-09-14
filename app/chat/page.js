@@ -9,7 +9,7 @@ import CreateGroupModal from "../../components/groups/CreateGroupModal";
 import GroupSettingsModal from "../../components/groups/GroupSettingsModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
-import { api, API_BASE, getToken } from "../../services/api";
+import { api, uploadWithProgress } from "../../services/api";
 import { getSocket, connectSocket } from "../../services/socket";
 import { createGroup as createGroupRequest } from "../../services/groups";
 import { createPersonalRoomId, normalizeEmail } from "../../utils/room";
@@ -146,6 +146,11 @@ function ChatContent() {
         setNextCursor(result.nextCursor || null);
         setHasMore(Boolean(result.hasMore));
         setMobileSidebarHidden(true);
+        // The server already marked this room read as part of join_room -
+        // mirror that locally so the badge clears immediately.
+        setPersonalChats((prev) =>
+          prev.map((chat) => (chat.roomId === result.roomId ? { ...chat, unreadCount: 0 } : chat))
+        );
       }
     );
   }
@@ -165,6 +170,9 @@ function ChatContent() {
         setNextCursor(result.nextCursor || null);
         setHasMore(Boolean(result.hasMore));
         setMobileSidebarHidden(true);
+        setGroups((prev) =>
+          prev.map((existing) => (existing.roomId === result.roomId ? { ...existing, unreadCount: 0 } : existing))
+        );
       }
     );
   }
@@ -202,7 +210,7 @@ function ChatContent() {
     });
   }
 
-  async function sendMedia(file, caption) {
+  async function sendMedia(file, caption, onProgress) {
     if (!activeChat) return;
     const formData = new FormData();
     formData.append("media", file);
@@ -211,13 +219,14 @@ function ChatContent() {
     if (activeChat.chatType === "group") formData.append("groupId", activeChat.group._id);
     if (caption) formData.append("caption", caption);
 
-    const response = await fetch(`${API_BASE}/api/media/upload`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${getToken()}` },
-      body: formData
-    });
-    const data = await response.json();
-    if (!response.ok || !data.success) {
+    let data;
+    try {
+      data = await uploadWithProgress("/api/media/upload", formData, onProgress);
+    } catch (err) {
+      showToast(err.message || "Unable to send media", "error");
+      throw err;
+    }
+    if (!data.success) {
       showToast(data.message || "Unable to send media", "error");
       throw new Error(data.message || "Unable to send media");
     }
@@ -229,8 +238,8 @@ function ChatContent() {
     return data.user;
   }
 
-  async function createGroup({ name, memberEmails }) {
-    const group = await createGroupRequest({ name, memberEmails });
+  async function createGroup({ name, description, memberEmails }) {
+    const group = await createGroupRequest({ name, description, memberEmails });
     showToast("Group created", "success");
     setShowGroupModal(false);
     await loadSidebarData();

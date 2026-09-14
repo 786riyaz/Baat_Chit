@@ -120,6 +120,9 @@ export default function Sidebar({
                 <div className="title">{chat.user.name}</div>
                 <div className="subtitle">{lastSeenLabel(chat.user) || chat.user.email}</div>
               </div>
+              {chat.unreadCount > 0 && (
+                <span className="unread-badge">{chat.unreadCount > 99 ? "99+" : chat.unreadCount}</span>
+              )}
             </div>
           ))}
         </div>
@@ -155,6 +158,9 @@ export default function Sidebar({
                 <div className="title">{group.name}</div>
                 <div className="subtitle">{group.members.length} members</div>
               </div>
+              {group.unreadCount > 0 && (
+                <span className="unread-badge">{group.unreadCount > 99 ? "99+" : group.unreadCount}</span>
+              )}
               <button
                 type="button"
                 className="icon-btn"

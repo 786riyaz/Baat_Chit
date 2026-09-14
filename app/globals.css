@@ -2,8 +2,7 @@
   /* Brand chrome (sidebar, accent) stays constant across both themes -
      only the canvas/panel/text surfaces switch between dark and light. */
   --ink: #14232b;
-  --ink-soft-rrr: #1f373f;
-  --ink-soft: #93a29c;
+  --ink-soft: #1f373f;
   --accent: #c98a2c;
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -185,11 +184,12 @@ select {
   font-size: 0.82rem;
   font-weight: 600;
   margin-bottom: 6px;
-  color: var(--ink-soft);
+  color: var(--text-muted);
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -200,7 +200,7 @@ select {
 
 .field input:focus,
 .field textarea:focus,
-select:focus {
+.field select:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -498,6 +498,21 @@ select:focus {
   text-align: center;
 }
 
+.unread-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
 .online-dot {
   width: 8px;
   height: 8px;
@@ -550,7 +565,7 @@ select:focus {
 .chat-empty-state .headline {
   font-family: var(--font-display);
   font-size: 1.3rem;
-  color: var(--ink-soft);
+  color: var(--text-muted);
 }
 
 .messages-scroll {
@@ -672,7 +687,7 @@ select:focus {
   border-radius: 16px;
   padding: 6px 12px;
   font-size: 0.8rem;
-  color: var(--ink-soft);
+  color: var(--text-muted);
 }
 
 .ai-chip:hover {
@@ -696,7 +711,7 @@ select:focus {
   border: 1px solid var(--line);
   background: var(--canvas);
   max-height: 120px;
-  color: var(--ink-soft);
+  color:#647169;
 }
 
 .message-input-row textarea:disabled {
@@ -730,7 +745,7 @@ select:focus {
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-  color: var(--ink-soft);
+  color: var(--text-muted);
 }
 
 /* ---------- Modals ---------- */
@@ -794,6 +809,20 @@ select:focus {
   font-size: 0.8rem;
 }
 
+.upload-progress {
+  width: 120px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s ease;
+}
+
 /* ---------- Profile page ---------- */
 .profile-shell {
   min-height: 100vh;
@@ -830,7 +859,7 @@ select:focus {
 .back-link {
   display: inline-block;
   margin-bottom: 16px;
-  color: var(--ink-soft);
+  color: var(--text-muted);
   font-size: 0.85rem;
   text-decoration: none;
 }
@@ -863,25 +892,20 @@ select:focus {
   .auth-layout {
     flex-direction: column;
   }
-
   .auth-brand-pane {
     padding: 32px 24px;
     flex: none;
   }
-
   .auth-brand-pane h1 {
     font-size: 1.7rem;
     max-width: none;
   }
-
   .auth-brand-bubbles {
     display: none;
   }
-
   .chat-shell {
     position: relative;
   }
-
   .sidebar {
     position: absolute;
     inset: 0;
@@ -889,19 +913,15 @@ select:focus {
     z-index: 10;
     transition: transform 0.2s ease;
   }
-
   .sidebar.hidden-mobile {
     transform: translateX(-100%);
   }
-
   .chat-main {
     width: 100%;
   }
-
   .bubble {
     max-width: 80%;
   }
-
   .back-to-list {
     display: inline-flex !important;
   }
@@ -911,7 +931,7 @@ select:focus {
   display: none;
   background: transparent;
   border: none;
-  color: var(--ink-soft);
+  color: var(--text-muted);
   font-size: 1.1rem;
   padding: 4px;
 }

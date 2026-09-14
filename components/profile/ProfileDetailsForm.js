@@ -72,7 +72,6 @@ export default function ProfileDetailsForm({ user, onUpdated }) {
           <select
             value={user.lastSeenPrivacy || "everyone"}
             onChange={(event) => handlePrivacyToggle(event.target.value)}
-            style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border)" }}
           >
             <option value="everyone">Everyone</option>
             <option value="nobody">Nobody</option>

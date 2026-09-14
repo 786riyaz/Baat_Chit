@@ -414,6 +414,25 @@ return otherEmail ? { roomId, otherEmail, lastMessageAt } : null;
 .filter(Boolean)
 .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt))
 .slice(0, 20);
+const roomIds = entries.map((entry) => entry.roomId);
+const userObjectId = new mongoose.Types.ObjectId(req.user.userId);
+// Unread counts only scan the active Message collection, not ArchivedChat -
+// a message old enough to have been archived (default 24h+) sitting unread
+// is an edge case not worth the extra aggregation cost here.
+const unreadAgg = roomIds.length
+? await Message.aggregate([
+{
+$match: {
+chatType: "personal",
+roomId: { $in: roomIds },
+sender: { $ne: userObjectId },
+readBy: { $ne: userObjectId }
+}
+},
+{ $group: { _id: "$roomId", count: { $sum: 1 } } }
+])
+: [];
+const unreadByRoom = new Map(unreadAgg.map((row) => [row._id, row.count]));
 const users = await User.find({
 email: { $in: entries.map((entry) => entry.otherEmail) }
 }).select("name email isOnline lastSeen lastSeenPrivacy");
@@ -425,6 +444,7 @@ if (!user) return null;
 return {
 roomId: entry.roomId,
 lastMessageAt: entry.lastMessageAt,
+unreadCount: unreadByRoom.get(entry.roomId) || 0,
 user: { id: user._id, name: user.name, email: user.email, ...presenceSummary(user) }
 };
 })
@@ -543,9 +563,29 @@ members: req.user.userId
 .populate("members", "name email")
 .populate("admins", "name email")
 .sort({ updatedAt: -1, createdAt: -1 });
+const roomIds = groups.map((group) => group.roomId);
+const userObjectId = new mongoose.Types.ObjectId(req.user.userId);
+const unreadAgg = roomIds.length
+? await Message.aggregate([
+{
+$match: {
+chatType: "group",
+roomId: { $in: roomIds },
+sender: { $ne: userObjectId },
+readBy: { $ne: userObjectId }
+}
+},
+{ $group: { _id: "$roomId", count: { $sum: 1 } } }
+])
+: [];
+const unreadByRoom = new Map(unreadAgg.map((row) => [row._id, row.count]));
+const groupsWithUnread = groups.map((group) => ({
+...group.toJSON(),
+unreadCount: unreadByRoom.get(group.roomId) || 0
+}));
 return res.json({
 success: true,
-groups
+groups: groupsWithUnread
 });
 } catch (error) {
 console.error("Get groups error:", error);

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 export default function CreateGroupModal({ onClose, onCreate }) {
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [members, setMembers] = useState([]);
   const [error, setError] = useState("");
@@ -34,7 +35,7 @@ export default function CreateGroupModal({ onClose, onCreate }) {
     }
     setSubmitting(true);
     try {
-      await onCreate({ name: name.trim(), memberEmails: members });
+      await onCreate({ name: name.trim(), description: description.trim(), memberEmails: members });
     } catch (err) {
       setError(err.message || "Unable to create group");
     } finally {
@@ -56,6 +57,16 @@ export default function CreateGroupModal({ onClose, onCreate }) {
               value={name}
               onChange={(event) => setName(event.target.value)}
               required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="groupDescription">Description (optional)</label>
+            <textarea
+              id="groupDescription"
+              rows={2}
+              maxLength={300}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
             />
           </div>
           <div className="field">
