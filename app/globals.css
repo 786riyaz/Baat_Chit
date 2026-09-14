@@ -79,12 +79,14 @@ select {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   color: var(--text-muted);
 }
 
 /* ---------- Auth pages: two-pane layout ---------- */
 .auth-layout {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
 }
 
@@ -296,6 +298,7 @@ select {
 .chat-shell {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -449,6 +452,7 @@ select {
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: 12px;
 }
 
@@ -539,6 +543,10 @@ select {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-shrink: 0;
 }
 
 .chat-header .title {
@@ -571,6 +579,7 @@ select {
 .messages-scroll {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -660,6 +669,7 @@ select {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .trial-banner.info {
@@ -701,6 +711,7 @@ select {
   display: flex;
   gap: 10px;
   align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .message-input-row textarea {
@@ -710,8 +721,8 @@ select {
   border-radius: 20px;
   border: 1px solid var(--line);
   background: var(--canvas);
+  color: var(--text);
   max-height: 120px;
-  color:#647169;
 }
 
 .message-input-row textarea:disabled {
@@ -826,6 +837,7 @@ select {
 /* ---------- Profile page ---------- */
 .profile-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--canvas);
   padding: 32px 20px;
 }

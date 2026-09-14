@@ -8,6 +8,19 @@ export const metadata = {
   description: "Real-time chat"
 };
 
+// Without this, some mobile browsers (notably Chrome on Android) leave the
+// layout viewport unchanged when the on-screen keyboard opens and just
+// overlay the keyboard on top of the page instead - which is exactly why
+// the message input box was getting covered. "resizes-content" forces the
+// classic/expected behavior: the visible viewport actually shrinks, so
+// 100dvh-based layouts below correctly shrink with it and the input stays
+// above the keyboard.
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content"
+};
+
 // Runs before React hydrates, so the correct theme is set on <html> before
 // first paint - without this, the page would flash the default (dark)
 // theme even for someone who has light saved, then snap to light a moment
