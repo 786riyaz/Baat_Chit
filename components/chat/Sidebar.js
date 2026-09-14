@@ -4,12 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import Avatar from "../common/Avatar";
 import ThemeToggle from "../common/ThemeToggle";
+import { formatLastSeen } from "../../utils/time";
 
 function lastSeenLabel(user) {
   if (user.isOnline) return "Online";
   if (!user.lastSeen) return "";
-  const date = new Date(user.lastSeen);
-  return `Last seen ${date.toLocaleDateString([], { month: "short", day: "numeric" })} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  return formatLastSeen(user.lastSeen);
 }
 
 export default function Sidebar({

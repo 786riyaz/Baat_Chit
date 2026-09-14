@@ -1,9 +1,6 @@
 "use client";
 
-function formatTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
+import { formatTime } from "../../utils/time";
 
 function MediaContent({ media }) {
   if (!media || !media.url) return null;

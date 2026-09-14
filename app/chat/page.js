@@ -115,17 +115,59 @@ function ChatContent() {
       setSettingsGroup((current) => (current && String(current._id) === String(groupId) ? group : current));
     }
 
+    // Mobile browsers aggressively suspend background tabs - if the socket
+    // drops while backgrounded, events (like the ones that update unread
+    // badges) are silently missed until it reconnects. This resyncs
+    // everything whenever that happens, and also restores the server-side
+    // "which room is this socket currently in" state (a fresh connection
+    // means the server no longer remembers it, so without this a reconnect
+    // while viewing a chat would leave sending broken until you reopened it).
+    function handleReconnect() {
+      loadSidebarData();
+      const current = activeChatRef.current;
+      if (!current) return;
+      if (current.chatType === "personal") {
+        socket.emit("join_room", {
+          roomId: current.roomId,
+          chatType: "personal",
+          otherEmail: normalizeEmail(current.otherUser.email)
+        });
+      } else {
+        socket.emit("join_room", {
+          roomId: current.roomId,
+          chatType: "group",
+          groupId: current.group._id
+        });
+      }
+    }
+
     socket.on("new_message", handleNewMessage);
     socket.on("message_status_update", handleStatusUpdate);
     socket.on("messages_read", handleMessagesRead);
     socket.on("user_presence", handlePresence);
     socket.on("group_updated", handleGroupUpdated);
+    socket.on("connect", handleReconnect);
+
+    // Extra safety net: some mobile browsers suspend timers/sockets without
+    // ever firing a "disconnect" event the socket client would notice - the
+    // tab just silently goes quiet. Explicitly re-checking on visibility
+    // regain catches that case too.
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        connectSocket();
+        loadSidebarData();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       socket.off("new_message", handleNewMessage);
       socket.off("message_status_update", handleStatusUpdate);
       socket.off("messages_read", handleMessagesRead);
       socket.off("user_presence", handlePresence);
       socket.off("group_updated", handleGroupUpdated);
+      socket.off("connect", handleReconnect);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadSidebarData, user.id]);

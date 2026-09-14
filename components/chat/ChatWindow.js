@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import Avatar from "../common/Avatar";
 import { api } from "../../services/api";
+import { formatLastSeen } from "../../utils/time";
 
 const PREDICT_DEBOUNCE_MS = 900;
 
@@ -11,8 +12,7 @@ function lastSeenLabel(user) {
   if (!user) return "";
   if (user.isOnline) return "Online";
   if (!user.lastSeen) return "";
-  const date = new Date(user.lastSeen);
-  return `Last seen ${date.toLocaleDateString([], { month: "short", day: "numeric" })} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  return formatLastSeen(user.lastSeen);
 }
 
 export default function ChatWindow({
@@ -35,6 +35,7 @@ export default function ChatWindow({
 
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
   const debounceRef = useRef(null);
   const predictRequestId = useRef(0);
   const lastIncomingIdRef = useRef(null);
@@ -145,6 +146,10 @@ export default function ChatWindow({
       setDraft("");
       setPendingFile(null);
       setPredictions([]);
+      // Belt-and-suspenders: even with the pointerdown fix on the send
+      // button, make sure focus (and therefore the keyboard) ends up back
+      // on the textarea once sending completes.
+      textareaRef.current?.focus();
     } finally {
       setSending(false);
       setUploadProgress(null);
@@ -252,6 +257,7 @@ export default function ChatWindow({
           &#128206;
         </button>
         <textarea
+          ref={textareaRef}
           rows={1}
           placeholder={pendingFile ? "Add a caption (optional)" : "Type a message"}
           value={draft}
@@ -263,7 +269,16 @@ export default function ChatWindow({
             }
           }}
         />
-        <button type="submit" className="send-btn" disabled={sending || (!draft.trim() && !pendingFile)}>
+        <button
+          type="submit"
+          className="send-btn"
+          disabled={sending || (!draft.trim() && !pendingFile)}
+          // Tapping a button naturally moves focus to it, which is what
+          // closes the on-screen keyboard on mobile. Preventing the
+          // default on pointerdown keeps focus on the textarea throughout
+          // the tap, so the keyboard never closes in the first place.
+          onPointerDown={(event) => event.preventDefault()}
+        >
           &#10148;
         </button>
       </form>
