@@ -45,6 +45,10 @@ const nextApp = next({ dev });
 const handleNextRequest = nextApp.getRequestHandler();
 
 const app = express();
+// Behind a reverse proxy (Render, etc.) req.ip would otherwise be the
+// proxy's own IP for every request, making all users share one rate-limit
+// bucket. This makes Express read the real client IP from X-Forwarded-For.
+app.set("trust proxy", 1);
 const httpServer = http.createServer(app);
 // Everything - the Next.js frontend AND this API/Socket.IO backend - runs as
 // ONE process on ONE port now, so there's no cross-origin request at all and
@@ -53,12 +57,42 @@ const io = new Server(httpServer);
 const PORT = process.env.PORT || 3000;
 const RESET_TOKEN_EXPIRY_MINUTES = Number(process.env.RESET_TOKEN_EXPIRY_MINUTES) || 15;
 const forgotPasswordRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 5 });
+// Broad abuse protection across every API route, plus a stricter limiter
+// specifically on signup/login to slow down credential-stuffing / spam
+// signups. Forgot-password keeps its own separate, tighter limiter above -
+// this doesn't replace that, it's an additional general-purpose layer.
+const generalApiRateLimit = createRateLimiter({ windowMs: 60 * 1000, max: 120 });
+const authRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 20 });
+function rateLimitMiddleware(limiter, { keyPrefix, message }) {
+return (req, res, next) => {
+const key = `${keyPrefix}:${req.ip}`;
+const { limited, retryAfterMs } = limiter(key);
+if (limited) {
+return res.status(429).json({
+success: false,
+message: message || `Too many requests. Please try again in ${Math.ceil(retryAfterMs / 60000)} minute(s).`
+});
+}
+next();
+};
+}
 app.use(express.json());
+app.use(
+"/api",
+rateLimitMiddleware(generalApiRateLimit, {
+keyPrefix: "api",
+message: "Too many requests. Please slow down and try again shortly."
+})
+);
 app.use("/api/ai", aiRoutes);
 // Mongo connection + server startup happen at the bottom of this file, once
 // Next.js has finished preparing (see nextApp.prepare().then(...) below).
 // ---------------- AUTH ----------------
-app.post("/api/signup", async (req, res) => {
+const authRateLimitMiddleware = rateLimitMiddleware(authRateLimit, {
+keyPrefix: "auth",
+message: "Too many attempts. Please wait a few minutes and try again."
+});
+app.post("/api/signup", authRateLimitMiddleware, async (req, res) => {
 try {
 const { name, email, phone, password } = req.body;
 if (!name || !email || !phone || !password) {
@@ -105,7 +139,7 @@ message: "Internal server error"
 });
 }
 });
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", authRateLimitMiddleware, async (req, res) => {
 try {
 const { login, password } = req.body;
 if (!login || !password) {

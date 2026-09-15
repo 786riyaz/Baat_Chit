@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
+import MessagesSkeleton from "./MessagesSkeleton";
 import Avatar from "../common/Avatar";
 import { api } from "../../services/api";
 import { formatLastSeen } from "../../utils/time";
@@ -19,6 +20,7 @@ export default function ChatWindow({
   user,
   activeChat,
   messages,
+  messagesLoading,
   hasMore,
   loadingMore,
   onSend,
@@ -186,29 +188,35 @@ export default function ChatWindow({
       </div>
 
       <div className="messages-scroll" ref={scrollRef} onScroll={handleScroll}>
-        {loadingMore && <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)" }}>Loading older messages...</div>}
-        {messages.length === 0 && (
-          <div className="chat-empty-state">No messages yet. Say hello.</div>
+        {messagesLoading ? (
+          <MessagesSkeleton />
+        ) : (
+          <>
+            {loadingMore && <div style={{ textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)" }}>Loading older messages...</div>}
+            {messages.length === 0 && (
+              <div className="chat-empty-state">No messages yet. Say hello.</div>
+            )}
+            {messages.map((message, index) => {
+              const senderId = String(message.sender?._id || message.sender);
+              const previous = messages[index - 1];
+              const previousSenderId = previous ? String(previous.sender?._id || previous.sender) : null;
+              const isGrouped = Boolean(
+                previous &&
+                previousSenderId === senderId &&
+                new Date(message.createdAt) - new Date(previous.createdAt) < 5 * 60 * 1000
+              );
+              return (
+                <MessageBubble
+                  key={message._id}
+                  message={message}
+                  isMine={senderId === String(user.id)}
+                  showSenderName={activeChat.chatType === "group"}
+                  grouped={isGrouped}
+                />
+              );
+            })}
+          </>
         )}
-        {messages.map((message, index) => {
-          const senderId = String(message.sender?._id || message.sender);
-          const previous = messages[index - 1];
-          const previousSenderId = previous ? String(previous.sender?._id || previous.sender) : null;
-          const isGrouped = Boolean(
-            previous &&
-            previousSenderId === senderId &&
-            new Date(message.createdAt) - new Date(previous.createdAt) < 5 * 60 * 1000
-          );
-          return (
-            <MessageBubble
-              key={message._id}
-              message={message}
-              isMine={senderId === String(user.id)}
-              showSenderName={activeChat.chatType === "group"}
-              grouped={isGrouped}
-            />
-          );
-        })}
       </div>
 
       {smartReplies.length > 0 && (

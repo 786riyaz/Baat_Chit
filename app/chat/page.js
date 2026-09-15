@@ -26,8 +26,10 @@ function ChatContent() {
 
   const [personalChats, setPersonalChats] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -50,6 +52,8 @@ function ChatContent() {
       setGroups(groupsData.groups || []);
     } catch (err) {
       showToast(err.message || "Unable to load chats", "error");
+    } finally {
+      setSidebarLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -175,10 +179,13 @@ function ChatContent() {
   async function openPersonalChat(otherUser) {
     const roomId = createPersonalRoomId(user.email, otherUser.email);
     const socket = getSocket();
+    setMessagesLoading(true);
+    setMessages([]);
     socket.emit(
       "join_room",
       { roomId, chatType: "personal", otherEmail: normalizeEmail(otherUser.email) },
       (result) => {
+        setMessagesLoading(false);
         if (!result.success) {
           showToast(result.message, "error");
           return;
@@ -199,10 +206,13 @@ function ChatContent() {
 
   async function openGroupChat(group) {
     const socket = getSocket();
+    setMessagesLoading(true);
+    setMessages([]);
     socket.emit(
       "join_room",
       { roomId: group.roomId, chatType: "group", groupId: group._id },
       (result) => {
+        setMessagesLoading(false);
         if (!result.success) {
           showToast(result.message, "error");
           return;
@@ -311,6 +321,7 @@ function ChatContent() {
         user={user}
         personalChats={personalChats}
         groups={groups}
+        loading={sidebarLoading}
         activeChat={activeChat}
         onOpenPersonal={openPersonalChat}
         onOpenGroup={openGroupChat}
@@ -327,6 +338,7 @@ function ChatContent() {
           user={user}
           activeChat={activeChat}
           messages={messages}
+          messagesLoading={messagesLoading}
           hasMore={hasMore}
           loadingMore={loadingMore}
           onSend={sendMessage}

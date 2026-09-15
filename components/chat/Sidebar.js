@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Avatar from "../common/Avatar";
 import ThemeToggle from "../common/ThemeToggle";
+import SidebarSkeleton from "./SidebarSkeleton";
 import { formatLastSeen } from "../../utils/time";
 
 function lastSeenLabel(user) {
@@ -16,6 +17,7 @@ export default function Sidebar({
   user,
   personalChats,
   groups,
+  loading,
   activeChat,
   onOpenPersonal,
   onOpenGroup,
@@ -106,25 +108,31 @@ export default function Sidebar({
 
       {tab === "chats" && (
         <div className="sidebar-list">
-          {personalChats.length === 0 && (
-            <div className="sidebar-empty">No conversations yet. Search an email above to start one.</div>
-          )}
-          {personalChats.map((chat) => (
-            <div
-              key={chat.roomId}
-              className={`sidebar-item ${activeChat?.roomId === chat.roomId ? "active" : ""}`}
-              onClick={() => onOpenPersonal(chat.user)}
-            >
-              <Avatar name={chat.user.name} photo={chat.user.profilePhoto} online={chat.user.isOnline} />
-              <div className="meta">
-                <div className="title">{chat.user.name}</div>
-                <div className="subtitle">{lastSeenLabel(chat.user) || chat.user.email}</div>
-              </div>
-              {chat.unreadCount > 0 && (
-                <span className="unread-badge">{chat.unreadCount > 99 ? "99+" : chat.unreadCount}</span>
+          {loading ? (
+            <SidebarSkeleton />
+          ) : (
+            <>
+              {personalChats.length === 0 && (
+                <div className="sidebar-empty">No conversations yet. Search an email above to start one.</div>
               )}
-            </div>
-          ))}
+              {personalChats.map((chat) => (
+                <div
+                  key={chat.roomId}
+                  className={`sidebar-item ${activeChat?.roomId === chat.roomId ? "active" : ""}`}
+                  onClick={() => onOpenPersonal(chat.user)}
+                >
+                  <Avatar name={chat.user.name} photo={chat.user.profilePhoto} online={chat.user.isOnline} />
+                  <div className="meta">
+                    <div className="title">{chat.user.name}</div>
+                    <div className="subtitle">{lastSeenLabel(chat.user) || chat.user.email}</div>
+                  </div>
+                  {chat.unreadCount > 0 && (
+                    <span className="unread-badge">{chat.unreadCount > 99 ? "99+" : chat.unreadCount}</span>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
@@ -146,34 +154,40 @@ export default function Sidebar({
               </div>
             )}
           </div>
-          {groups.length === 0 && <div className="sidebar-empty">No groups yet.</div>}
-          {groups.map((group) => (
-            <div
-              key={group._id}
-              className={`sidebar-item ${activeChat?.roomId === group.roomId ? "active" : ""}`}
-              onClick={() => onOpenGroup(group)}
-            >
-              <Avatar name={group.name} photo={group.image} />
-              <div className="meta">
-                <div className="title">{group.name}</div>
-                <div className="subtitle">{group.members.length} members</div>
-              </div>
-              {group.unreadCount > 0 && (
-                <span className="unread-badge">{group.unreadCount > 99 ? "99+" : group.unreadCount}</span>
-              )}
-              <button
-                type="button"
-                className="icon-btn"
-                title="Group settings"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onGroupSettingsClick(group);
-                }}
-              >
-                &#8942;
-              </button>
-            </div>
-          ))}
+          {loading ? (
+            <SidebarSkeleton rows={3} />
+          ) : (
+            <>
+              {groups.length === 0 && <div className="sidebar-empty">No groups yet.</div>}
+              {groups.map((group) => (
+                <div
+                  key={group._id}
+                  className={`sidebar-item ${activeChat?.roomId === group.roomId ? "active" : ""}`}
+                  onClick={() => onOpenGroup(group)}
+                >
+                  <Avatar name={group.name} photo={group.image} />
+                  <div className="meta">
+                    <div className="title">{group.name}</div>
+                    <div className="subtitle">{group.members.length} members</div>
+                  </div>
+                  {group.unreadCount > 0 && (
+                    <span className="unread-badge">{group.unreadCount > 99 ? "99+" : group.unreadCount}</span>
+                  )}
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title="Group settings"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onGroupSettingsClick(group);
+                    }}
+                  >
+                    &#8942;
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </aside>

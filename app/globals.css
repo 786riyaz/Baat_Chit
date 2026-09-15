@@ -502,6 +502,61 @@ select {
   text-align: center;
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.skeleton {
+  background: var(--line);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: 5px;
+}
+
+.skeleton-bubble-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.skeleton-bubble-row.mine {
+  justify-content: flex-end;
+}
+
+.skeleton-bubble {
+  height: 38px;
+  border-radius: 16px;
+}
+
 .unread-badge {
   background: var(--accent);
   color: #fff;
