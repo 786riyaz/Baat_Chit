@@ -584,6 +584,12 @@ select {
   flex-shrink: 0;
 }
 
+.unread-badge.tab-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 .online-dot {
   width: 8px;
   height: 8px;

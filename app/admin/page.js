@@ -107,13 +107,14 @@ function AdminContent() {
             }}
             style={{ display: "flex", gap: 8, marginBottom: 12 }}
           >
-            <input
-              type="text"
-              placeholder="Search name, email, or phone"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)" }}
-            />
+            <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+              <input
+                type="text"
+                placeholder="Search name, email, or phone"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
             <button type="submit" className="btn btn-secondary">Search</button>
           </form>
         )}

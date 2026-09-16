@@ -34,6 +34,9 @@ export default function Sidebar({
   const [searchError, setSearchError] = useState("");
   const [searching, setSearching] = useState(false);
 
+  const totalChatsUnread = personalChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
+  const totalGroupsUnread = groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0);
+
   async function handleSearch(event) {
     event.preventDefault();
     setSearchError("");
@@ -100,9 +103,15 @@ export default function Sidebar({
       <div className="sidebar-tabs">
         <button className={tab === "chats" ? "active" : ""} onClick={() => setTab("chats")}>
           Chats
+          {totalChatsUnread > 0 && (
+            <span className="unread-badge tab-badge">{totalChatsUnread > 99 ? "99+" : totalChatsUnread}</span>
+          )}
         </button>
         <button className={tab === "groups" ? "active" : ""} onClick={() => setTab("groups")}>
           Groups
+          {totalGroupsUnread > 0 && (
+            <span className="unread-badge tab-badge">{totalGroupsUnread > 99 ? "99+" : totalGroupsUnread}</span>
+          )}
         </button>
       </div>
 

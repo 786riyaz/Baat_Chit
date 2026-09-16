@@ -215,12 +215,14 @@ export default function GroupSettingsModal({ group, currentUserId, onClose, onUp
 
         {amAdmin && (
           <form onSubmit={handleAddMember} style={{ marginTop: 12, display: "flex", gap: 8 }}>
-            <input
-              type="email"
-              placeholder="Add member by email"
-              value={newMemberEmail}
-              onChange={(event) => setNewMemberEmail(event.target.value)}
-            />
+            <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+              <input
+                type="email"
+                placeholder="Add member by email"
+                value={newMemberEmail}
+                onChange={(event) => setNewMemberEmail(event.target.value)}
+              />
+            </div>
             <button type="submit" className="btn btn-secondary">Add</button>
           </form>
         )}
