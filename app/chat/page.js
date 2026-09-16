@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import Sidebar from "../../components/chat/Sidebar";
 import ChatWindow from "../../components/chat/ChatWindow";
@@ -12,6 +12,7 @@ import { useToast } from "../../hooks/useToast";
 import { api, uploadWithProgress } from "../../services/api";
 import { getSocket, connectSocket } from "../../services/socket";
 import { createGroup as createGroupRequest } from "../../services/groups";
+import { getAdminContact } from "../../services/admin";
 import { createPersonalRoomId, normalizeEmail } from "../../utils/room";
 
 function mergePresenceIntoUser(target, presence) {
@@ -36,6 +37,7 @@ function ChatContent() {
   const [personalChats, setPersonalChats] = useState([]);
   const [groups, setGroups] = useState([]);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+  const [adminContact, setAdminContact] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -50,6 +52,27 @@ function ChatContent() {
   activeChatRef.current = activeChat;
 
   const canUseGroups = user.role === "admin" || user.approvalStatus === "approved";
+
+  // The admin's chat is always pinned at the top so a brand-new user (who
+  // has no message history and doesn't know the admin's email) can still
+  // reach them for approval without searching. If there's already a real
+  // conversation with the admin, that entry is promoted to the top and
+  // marked pinned rather than duplicated.
+  const displayPersonalChats = useMemo(() => {
+    if (!adminContact || user.role === "admin") return personalChats;
+    const existing = personalChats.find((chat) => String(chat.user.id) === String(adminContact.id));
+    const others = personalChats.filter((chat) => String(chat.user.id) !== String(adminContact.id));
+    const pinnedEntry = existing
+      ? { ...existing, pinned: true, user: { ...existing.user, ...adminContact } }
+      : {
+          roomId: createPersonalRoomId(user.email, adminContact.email),
+          lastMessageAt: null,
+          unreadCount: 0,
+          pinned: true,
+          user: adminContact
+        };
+    return [pinnedEntry, ...others];
+  }, [personalChats, adminContact, user.role, user.email]);
 
   const loadSidebarData = useCallback(async () => {
     try {
@@ -66,6 +89,14 @@ function ChatContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (user.role === "admin") return;
+    getAdminContact()
+      .then(setAdminContact)
+      .catch(() => setAdminContact(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.role]);
 
   useEffect(() => {
     loadSidebarData();
@@ -110,6 +141,7 @@ function ChatContent() {
 
     function handlePresence(presence) {
       setPersonalChats((prev) => prev.map((chat) => ({ ...chat, user: mergePresenceIntoUser(chat.user, presence) })));
+      setAdminContact((current) => mergePresenceIntoUser(current, presence));
       setActiveChat((current) => {
         if (current?.chatType === "personal" && String(current.otherUser.id) === String(presence.userId)) {
           return { ...current, otherUser: mergePresenceIntoUser(current.otherUser, presence) };
@@ -337,7 +369,7 @@ function ChatContent() {
     <div className="chat-shell">
       <Sidebar
         user={user}
-        personalChats={personalChats}
+        personalChats={displayPersonalChats}
         groups={groups}
         loading={sidebarLoading}
         activeChat={activeChat}

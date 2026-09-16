@@ -291,6 +291,36 @@ console.error("Get current user error:", error);
 return res.status(500).json({ success: false, message: "Internal server error" });
 }
 });
+// Lets any authenticated user discover the admin's contact info without
+// needing to know their email - used to pin the admin's chat at the top of
+// everyone's chat list, so a brand-new user can reach the admin for
+// approval without first knowing who to search for.
+app.get("/api/admin-contact", authenticateToken, async (req, res) => {
+try {
+const adminEmail = getAdminEmail();
+if (!adminEmail) {
+return res.json({ success: true, admin: null });
+}
+const admin = await User.findOne({ email: adminEmail }).select(
+"_id name email role isOnline lastSeen lastSeenPrivacy"
+);
+if (!admin || admin.role !== "admin") {
+return res.json({ success: true, admin: null });
+}
+return res.json({
+success: true,
+admin: {
+id: admin._id,
+name: admin.name,
+email: admin.email,
+...presenceSummary(admin)
+}
+});
+} catch (error) {
+console.error("Admin contact lookup error:", error);
+return res.status(500).json({ success: false, message: "Unable to load admin contact" });
+}
+});
 // ---------------- PROFILE MANAGEMENT ----------------
 app.put("/api/users/me", authenticateToken, async (req, res) => {
 try {

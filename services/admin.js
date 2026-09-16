@@ -1,5 +1,12 @@
 import { api } from "./api";
 
+// Callable by any authenticated user (not admin-only) - lets the chat page
+// pin the admin's contact at the top of the chat list.
+export async function getAdminContact() {
+  const data = await api.get("/api/admin-contact");
+  return data.admin;
+}
+
 export async function getAdminStats() {
   const data = await api.get("/api/admin/stats");
   return data.stats;

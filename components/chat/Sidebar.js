@@ -132,9 +132,13 @@ export default function Sidebar({
                 >
                   <Avatar name={chat.user.name} photo={chat.user.profilePhoto} online={chat.user.isOnline} />
                   <div className="meta">
-                    <div className="title">{chat.user.name}</div>
+                    <div className="title">
+                      {chat.user.name}
+                      {chat.pinned && <span className="pinned-tag">Admin</span>}
+                    </div>
                     <div className="subtitle">{lastSeenLabel(chat.user) || chat.user.email}</div>
                   </div>
+                  {chat.pinned && <span className="pin-icon" title="Always available for approval/support">&#128204;</span>}
                   {chat.unreadCount > 0 && (
                     <span className="unread-badge">{chat.unreadCount > 99 ? "99+" : chat.unreadCount}</span>
                   )}

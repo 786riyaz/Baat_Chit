@@ -507,6 +507,24 @@ select {
   text-overflow: ellipsis;
 }
 
+.pinned-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(201, 138, 44, 0.2);
+  color: var(--accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.pin-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
 .sidebar-empty {
   padding: 24px 16px;
   color: #9fada8;
