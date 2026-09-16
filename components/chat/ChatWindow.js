@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import MessagesSkeleton from "./MessagesSkeleton";
+import MessageReceiptModal from "./MessageReceiptModal";
 import Avatar from "../common/Avatar";
 import { api } from "../../services/api";
 import { formatLastSeen } from "../../utils/time";
@@ -29,6 +30,7 @@ export default function ChatWindow({
   onBack
 }) {
   const [draft, setDraft] = useState("");
+  const [receiptMessageId, setReceiptMessageId] = useState(null);
   const [pendingFile, setPendingFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [sending, setSending] = useState(false);
@@ -49,6 +51,7 @@ export default function ChatWindow({
     setPendingFile(null);
     setPredictions([]);
     setSmartReplies([]);
+    setReceiptMessageId(null);
     lastIncomingIdRef.current = null;
     stickToBottomRef.current = true;
   }, [activeChat?.roomId]);
@@ -212,6 +215,7 @@ export default function ChatWindow({
                   isMine={senderId === String(user.id)}
                   showSenderName={activeChat.chatType === "group"}
                   grouped={isGrouped}
+                  onShowReceipts={activeChat.chatType === "group" ? (msg) => setReceiptMessageId(msg._id) : undefined}
                 />
               );
             })}
@@ -290,6 +294,18 @@ export default function ChatWindow({
           &#10148;
         </button>
       </form>
+      {receiptMessageId && activeChat.chatType === "group" && (() => {
+        const liveMessage = messages.find((message) => message._id === receiptMessageId);
+        if (!liveMessage) return null;
+        return (
+          <MessageReceiptModal
+            message={liveMessage}
+            members={activeChat.group.members}
+            senderId={user.id}
+            onClose={() => setReceiptMessageId(null)}
+          />
+        );
+      })()}
     </main>
   );
 }

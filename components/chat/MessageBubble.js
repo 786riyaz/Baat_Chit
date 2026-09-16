@@ -17,17 +17,21 @@ function MediaContent({ media }) {
   );
 }
 
-function StatusTicks({ status }) {
-  if (!status || status === "sent") {
-    return <span className="message-ticks">&#10003;</span>;
+function StatusTicks({ status, onClick }) {
+  const marks = !status || status === "sent" ? "\u2713" : "\u2713\u2713";
+  const className = `message-ticks ${status === "read" ? "read" : ""}`;
+  if (onClick) {
+    return (
+      <button type="button" className={`${className} message-ticks-btn`} onClick={onClick} title="View message info">
+        {marks}
+      </button>
+    );
   }
-  if (status === "delivered") {
-    return <span className="message-ticks">&#10003;&#10003;</span>;
-  }
-  return <span className="message-ticks read">&#10003;&#10003;</span>;
+  return <span className={className}>{marks}</span>;
 }
 
-export default function MessageBubble({ message, isMine, showSenderName, grouped }) {
+export default function MessageBubble({ message, isMine, showSenderName, grouped, onShowReceipts }) {
+  const canShowReceipts = isMine && showSenderName && !message.archived && Boolean(onShowReceipts);
   return (
     <div className={`message-row ${isMine ? "mine" : "theirs"} ${grouped ? "grouped" : ""}`}>
       <div className="bubble">
@@ -38,7 +42,12 @@ export default function MessageBubble({ message, isMine, showSenderName, grouped
         {message.text && <div>{message.text}</div>}
         <div className="timestamp">
           {formatTime(message.createdAt)}
-          {isMine && <StatusTicks status={message.status} />}
+          {isMine && (
+            <StatusTicks
+              status={message.status}
+              onClick={canShowReceipts ? () => onShowReceipts(message) : undefined}
+            />
+          )}
         </div>
       </div>
     </div>

@@ -20,6 +20,15 @@ function mergePresenceIntoUser(target, presence) {
   return { ...target, isOnline: presence.isOnline, lastSeen: presence.lastSeen };
 }
 
+function mergePresenceIntoMembers(members, presence) {
+  if (!members) return members;
+  return members.map((member) =>
+    String(member._id) === String(presence.userId)
+      ? { ...member, isOnline: presence.isOnline, lastSeen: presence.lastSeen }
+      : member
+  );
+}
+
 function ChatContent() {
   const { user, logout } = useAuth();
   const { showToast } = useToast();
@@ -105,8 +114,17 @@ function ChatContent() {
         if (current?.chatType === "personal" && String(current.otherUser.id) === String(presence.userId)) {
           return { ...current, otherUser: mergePresenceIntoUser(current.otherUser, presence) };
         }
+        if (current?.chatType === "group") {
+          return { ...current, group: { ...current.group, members: mergePresenceIntoMembers(current.group.members, presence) } };
+        }
         return current;
       });
+      setGroups((prev) =>
+        prev.map((group) => ({ ...group, members: mergePresenceIntoMembers(group.members, presence) }))
+      );
+      setSettingsGroup((current) =>
+        current ? { ...current, members: mergePresenceIntoMembers(current.members, presence) } : current
+      );
     }
 
     function handleGroupUpdated({ groupId, group }) {

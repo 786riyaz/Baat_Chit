@@ -517,6 +517,25 @@ function isGroupAdmin(group, userId) {
 const id = String(userId);
 return String(group.createdBy) === id || (group.admins || []).some((adminId) => String(adminId) === id);
 }
+// Group responses populate members with presence fields (isOnline/lastSeen/
+// lastSeenPrivacy) so the group UI can show each member's status the same
+// way personal chats do - this strips lastSeenPrivacy back out and applies
+// it before the data ever leaves the server, same privacy rule as everywhere else.
+function serializeGroupForResponse(group) {
+const plain = typeof group.toJSON === "function" ? group.toJSON() : group;
+return {
+...plain,
+members: (plain.members || []).map((member) => {
+if (!member || typeof member !== "object" || !member.name) return member;
+return {
+_id: member._id,
+name: member.name,
+email: member.email,
+...presenceSummary(member)
+};
+})
+};
+}
 async function joinMembersToRoom(io, roomId, memberIds) {
 await Promise.all(
 memberIds.map((memberId) => io.in(`user:${memberId}`).socketsJoin(roomId))
@@ -574,12 +593,12 @@ admins: [req.user.userId],
 members: memberIds
 });
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
 await joinMembersToRoom(io, group.roomId, memberIds.map(String));
 return res.status(201).json({
 success: true,
-group
+group: serializeGroupForResponse(group)
 });
 } catch (error) {
 console.error("Create group error:", error);
@@ -594,7 +613,7 @@ try {
 const groups = await Group.find({
 members: req.user.userId
 })
-.populate("members", "name email")
+.populate("members", "name email isOnline lastSeen lastSeenPrivacy")
 .populate("admins", "name email")
 .sort({ updatedAt: -1, createdAt: -1 });
 const roomIds = groups.map((group) => group.roomId);
@@ -614,7 +633,7 @@ readBy: { $ne: userObjectId }
 : [];
 const unreadByRoom = new Map(unreadAgg.map((row) => [row._id, row.count]));
 const groupsWithUnread = groups.map((group) => ({
-...group.toJSON(),
+...serializeGroupForResponse(group),
 unreadCount: unreadByRoom.get(group.roomId) || 0
 }));
 return res.json({
@@ -632,12 +651,12 @@ message: "Unable to load groups"
 app.get("/api/groups/:groupId", authenticateToken, async (req, res) => {
 try {
 const group = await Group.findOne({ _id: req.params.groupId, members: req.user.userId })
-.populate("members", "name email")
+.populate("members", "name email isOnline lastSeen lastSeenPrivacy")
 .populate("admins", "name email");
 if (!group) {
 return res.status(404).json({ success: false, message: "Group not found" });
 }
-return res.json({ success: true, group });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Get group error:", error);
 return res.status(500).json({ success: false, message: "Unable to load group" });
@@ -659,10 +678,10 @@ if (description !== undefined) {
 group.description = String(description).trim().slice(0, 300);
 }
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
-return res.json({ success: true, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Update group error:", error);
 return res.status(500).json({ success: false, message: "Unable to update group" });
@@ -683,10 +702,10 @@ return res.status(403).json({ success: false, message: "Only group admins can ch
 const media = await uploadMedia(req.file, "group-images");
 group.image = media.url;
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
-return res.json({ success: true, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Group image upload error:", error);
 return res.status(500).json({ success: false, message: error.message || "Unable to upload group image" });
@@ -725,11 +744,11 @@ return res.status(400).json({ success: false, message: "These users are already 
 }
 group.members.push(...newIds);
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
 await joinMembersToRoom(io, group.roomId, newIds.map(String));
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
-return res.json({ success: true, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Add group members error:", error);
 return res.status(500).json({ success: false, message: "Unable to add members" });
@@ -752,11 +771,11 @@ return res.status(400).json({ success: false, message: "This user is not a membe
 group.members = group.members.filter((id) => String(id) !== String(targetId));
 group.admins = group.admins.filter((id) => String(id) !== String(targetId));
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
 await leaveMemberFromRoom(io, group.roomId, targetId);
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
-return res.json({ success: true, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Remove group member error:", error);
 return res.status(500).json({ success: false, message: "Unable to remove member" });
@@ -781,9 +800,9 @@ group.admins = remainingAdmins;
 await group.save();
 await leaveMemberFromRoom(io, group.roomId, userId);
 if (group.members.length > 0) {
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
 }
 return res.json({ success: true, message: "You have left the group" });
 } catch (error) {
@@ -813,10 +832,10 @@ currentAdminIds.delete(String(targetId));
 }
 group.admins = [...currentAdminIds];
 await group.save();
-await group.populate("members", "name email");
+await group.populate("members", "name email isOnline lastSeen lastSeenPrivacy");
 await group.populate("admins", "name email");
-io.to(group.roomId).emit("group_updated", { groupId: group._id, group });
-return res.json({ success: true, group });
+io.to(group.roomId).emit("group_updated", { groupId: group._id, group: serializeGroupForResponse(group) });
+return res.json({ success: true, group: serializeGroupForResponse(group) });
 } catch (error) {
 console.error("Update group admin error:", error);
 return res.status(500).json({ success: false, message: "Unable to update group admins" });

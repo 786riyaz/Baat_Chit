@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Avatar from "../common/Avatar";
 import { useToast } from "../../hooks/useToast";
+import { formatLastSeen } from "../../utils/time";
 import {
   updateGroup,
   uploadGroupImage,
@@ -17,6 +18,12 @@ function isAdmin(group, userId) {
   const id = String(userId);
   return String(group.createdBy?._id || group.createdBy) === id
     || (group.admins || []).some((admin) => String(admin._id || admin) === id);
+}
+
+function memberPresenceLabel(member) {
+  if (member.isOnline) return "Online";
+  if (!member.lastSeen) return "";
+  return formatLastSeen(member.lastSeen);
 }
 
 export default function GroupSettingsModal({ group, currentUserId, onClose, onUpdated, onLeft }) {
@@ -170,13 +177,15 @@ export default function GroupSettingsModal({ group, currentUserId, onClose, onUp
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0" }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Avatar name={member.name} size={28} />
+                  <Avatar name={member.name} size={28} online={member.isOnline} />
                   <div>
                     <div style={{ fontSize: "0.85rem" }}>
                       {member.name} {memberIsCreator && <span style={{ color: "var(--text-muted)" }}>(creator)</span>}
                       {!memberIsCreator && memberIsAdmin && <span style={{ color: "var(--text-muted)" }}> (admin)</span>}
                     </div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{member.email}</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                      {memberPresenceLabel(member) || member.email}
+                    </div>
                   </div>
                 </div>
                 {amAdmin && String(member._id) !== String(currentUserId) && (

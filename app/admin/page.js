@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ProtectedRoute from "../../components/common/ProtectedRoute";
 import StatsGrid from "../../components/admin/StatsGrid";
+import StatsGridSkeleton from "../../components/admin/StatsGridSkeleton";
 import UsersTable from "../../components/admin/UsersTable";
+import UsersTableSkeleton from "../../components/admin/UsersTableSkeleton";
 import ThemeToggle from "../../components/common/ThemeToggle";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
@@ -78,7 +80,7 @@ function AdminContent() {
         </div>
         <h1 style={{ fontSize: "1.3rem" }}>Admin dashboard</h1>
 
-        {stats && <StatsGrid stats={stats} />}
+        {loading && !stats ? <StatsGridSkeleton /> : stats && <StatsGrid stats={stats} />}
 
         <div className="sidebar-tabs" style={{ padding: 0, marginBottom: 12 }}>
           <button
@@ -117,7 +119,7 @@ function AdminContent() {
         )}
 
         {loading ? (
-          <div className="page-loader" style={{ height: 120 }}>Loading...</div>
+          <UsersTableSkeleton />
         ) : (
           <UsersTable
             users={users}
